@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "RAM Lost & Found",
+    "slug": "ram-lost-found-js",
+    "version": "1.0.0",
+    "scheme": "ramlostfound",
+    "icon": "./assets/icon.png",
+    "plugins": []
+    
+  }
+}
