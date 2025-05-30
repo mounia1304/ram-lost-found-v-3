@@ -1,56 +1,50 @@
 import React from "react";
-import { View, Text, StyleSheet, Alert, Linking } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Linking,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import Title from "../../components/title";
-import Button from "../../components/button";
 
 export default function FoundChoiceScreen() {
   const navigation = useNavigation();
-  const [loading, setLoading] = React.useState(false);
 
-  const handleInPlane = () => {
-    setLoading(false);
-    navigation.navigate("Reportfound");
-  };
+  const handleInPlane = () => navigation.navigate("Reportfound");
 
   const handleOutsidePlane = () => {
-    setLoading(true);
     Alert.alert(
-      "Trouvé ailleurs ?",
-      "Tu seras redirigé vers la page pour contacter les responsables."
-    );
-    setLoading(false);
-    Linking.openURL(
-      "https://deliverback.com/fr/casablanca-airport-lost-and-found/"
+      "Objet trouvé ailleurs",
+      "Vous serez redirigé vers le service approprié",
+      [
+        { text: "Annuler" },
+        {
+          text: "OK",
+          onPress: () =>
+            Linking.openURL(
+              "https://deliverback.com/fr/casablanca-airport-lost-and-found/"
+            ),
+        },
+      ]
     );
   };
 
   return (
     <View style={styles.container}>
-      <Title text="Tu as trouvé un objet ?" style={styles.customTitle} />
-      <Text style={styles.subtitle}>
-        Merci de nous aider ! Dis-nous où tu l'as trouvé.
-      </Text>
+      <Text style={styles.title}>Où avez-vous trouvé l'objet ?</Text>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title="C'était à bord de l'avion"
-          onPress={handleInPlane}
-          loading={loading}
-          disabled={loading}
-          style={styles.bigButton}
-          textStyle={styles.bigButtonText}
-        />
-        <View style={{ height: 8 }} />
-        <Button
-          title="Non, c'est ailleurs !"
-          onPress={handleOutsidePlane}
-          loading={loading}
-          disabled={loading}
-          style={styles.bigButton}
-          textStyle={styles.bigButtonText}
-        />
-      </View>
+      <TouchableOpacity style={styles.button} onPress={handleInPlane}>
+        <Text style={styles.buttonText}>Dans l'avion</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, styles.secondaryButton]}
+        onPress={handleOutsidePlane}
+      >
+        <Text style={styles.buttonText}>Ailleurs dans l'aéroport</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -59,29 +53,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: 30,
-    backgroundColor: "#fff",
-    marginTop: 10,
+    padding: 20,
+    backgroundColor: "#FAFAFA",
   },
-  customTitle: {
-    color: "#000", // noir
-  },
-  subtitle: {
-    fontSize: 18,
+  title: {
+    fontSize: 20,
     textAlign: "center",
     marginBottom: 30,
-    color: "#333",
+    color: "#333231",
+    fontWeight: "600",
   },
-  buttonContainer: {
-    width: "100%",
+  button: {
+    backgroundColor: "#C20831",
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    alignItems: "center",
   },
-  bigButton: {
-    paddingVertical: 18,
-    borderRadius: 12,
-    marginBottom: 10,
+  secondaryButton: {
+    backgroundColor: "#61374E",
   },
-  bigButtonText: {
-    fontSize: 18,
-    fontWeight: "bold",
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
   },
 });

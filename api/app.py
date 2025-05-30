@@ -35,7 +35,7 @@ def save_match(lost_id, found_id, score, user_id=None):
         "lost_id": lost_id,
         "found_id": found_id,
         "score": score,
-        "user_id": user_id,
+        "userId": user_id,
         "status": "waiting",
         "timestamp": datetime.utcnow()
     }
@@ -80,7 +80,7 @@ def generate_embedding():
     doc_id = data.get("docId")
     description = data.get("description")
     object_type = data.get("type")  # "lost" ou "found"
-    user_id = data.get("userId")  #  Extraire userId
+    userId = data.get("userId")  #  Extraire userId
 
     if not doc_id or not description or object_type not in ["lost", "found"]:
         # Stocke dans une collection temporaire

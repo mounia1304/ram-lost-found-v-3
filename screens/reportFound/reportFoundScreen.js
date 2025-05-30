@@ -19,7 +19,6 @@ import PhoneInput from "react-native-phone-number-input";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
-import { useForm, Controller } from "react-hook-form";
 
 // Constantes et services
 import { objectTypes } from "../../constants/objecttypes";
@@ -129,37 +128,30 @@ const CustomSelector = ({ label, options, selectedValue, onSelect }) => {
 function ReportFoundScreen() {
   const navigation = useNavigation();
 
-  // États du formulaire avec useForm
-  const {
-    control,
-    handleSubmit,
-    watch,
-    setValue,
-    getValues,
-    formState: { errors },
-    reset,
-  } = useForm({
-    defaultValues: {
-      typeObjet: "",
-      description: "",
-      lieu: "",
-      numVol: "",
-      email: "",
-      telephone: "",
-      acceptTerms: false,
-    },
+  // États du formulaire
+  const [formData, setFormData] = useState({
+    typeObjet: "",
+    description: "",
+    lieu: "",
+    numVol: "",
+    email: "",
+    telephone: "",
+    acceptTerms: false,
   });
 
-  // États locaux
   const [currentStep, setCurrentStep] = useState(1);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const phoneInput = useRef(null);
   const scrollViewRef = useRef();
 
-  // Surveillance des valeurs pour les alertes conditionnelles
-  const typeObjet = watch("typeObjet");
-  const description = watch("description");
+  // Gestion des changements de formulaire
+  const handleChange = (name, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
   // Demande d'autorisation pour accéder à la galerie
   useEffect(() => {
@@ -174,9 +166,20 @@ function ReportFoundScreen() {
 
   // Réinitialisation du formulaire
   const resetForm = () => {
-    reset();
+    setFormData({
+      typeObjet: "",
+      description: "",
+      lieu: "",
+      numVol: "",
+      email: "",
+      telephone: "",
+      acceptTerms: false,
+    });
     setImage(null);
     setCurrentStep(1);
+    if (phoneInput.current) {
+      phoneInput.current.setState({ number: "" });
+    }
   };
 
   // Sélection d'une image
@@ -195,11 +198,9 @@ function ReportFoundScreen() {
 
   // Validation spécifique par étape avec alertes détaillées
   const validateStep = (step) => {
-    const values = getValues();
-
     if (step === 1) {
       // Validation type d'objet
-      if (!values.typeObjet?.trim()) {
+      if (!formData.typeObjet?.trim()) {
         Alert.alert(
           "Type d'objet requis",
           "Veuillez sélectionner le type d'objet trouvé dans la liste."
@@ -208,8 +209,8 @@ function ReportFoundScreen() {
       }
 
       // Validation description si "Autre" est sélectionné
-      const isAutre = values.typeObjet?.trim().toLowerCase() === "autre";
-      if (isAutre && !values.description?.trim()) {
+      const isAutre = formData.typeObjet?.trim().toLowerCase() === "autre";
+      if (isAutre && !formData.description?.trim()) {
         Alert.alert(
           "Description requise",
           "Vous avez sélectionné 'Autre'. Veuillez fournir une description détaillée de l'objet."
@@ -217,7 +218,7 @@ function ReportFoundScreen() {
         return false;
       }
 
-      if (isAutre && values.description?.length < 10) {
+      if (isAutre && formData.description?.length < 10) {
         Alert.alert(
           "Description insuffisante",
           "La description doit contenir au moins 10 caractères pour identifier l'objet."
@@ -228,7 +229,7 @@ function ReportFoundScreen() {
 
     if (step === 2) {
       // Validation numéro de vol
-      if (!values.numVol?.trim()) {
+      if (!formData.numVol?.trim()) {
         Alert.alert(
           "Numéro de vol requis",
           "Veuillez saisir le numéro de vol où l'objet a été trouvé (ex: AT123)."
@@ -238,7 +239,7 @@ function ReportFoundScreen() {
 
       // Validation format numéro de vol
       const volPattern = /^[A-Z]{2}\d+$/i;
-      if (!volPattern.test(values.numVol)) {
+      if (!volPattern.test(formData.numVol)) {
         Alert.alert(
           "Format de vol invalide",
           "Le numéro de vol doit suivre le format: 2 lettres suivies de chiffres (ex: AT123, RL456)."
@@ -247,7 +248,7 @@ function ReportFoundScreen() {
       }
 
       // Validation lieu
-      if (!values.lieu?.trim()) {
+      if (!formData.lieu?.trim()) {
         Alert.alert(
           "Lieu requis",
           "Veuillez préciser où exactement l'objet a été trouvé (ex: Siège 12A, Toilettes, Compartiment bagage)."
@@ -255,7 +256,7 @@ function ReportFoundScreen() {
         return false;
       }
 
-      if (values.lieu.length < 3) {
+      if (formData.lieu.length < 3) {
         Alert.alert(
           "Lieu trop vague",
           "Veuillez être plus précis sur le lieu de découverte pour faciliter l'identification."
@@ -266,7 +267,7 @@ function ReportFoundScreen() {
 
     if (step === 3) {
       // Validation email
-      if (!values.email?.trim()) {
+      if (!formData.email?.trim()) {
         Alert.alert(
           "Email requis",
           "Votre adresse email est nécessaire pour vous contacter en cas de réclamation."
@@ -275,7 +276,7 @@ function ReportFoundScreen() {
       }
 
       const emailPattern = /^\S+@\S+\.\S+$/;
-      if (!emailPattern.test(values.email)) {
+      if (!emailPattern.test(formData.email)) {
         Alert.alert(
           "Email invalide",
           "Veuillez saisir une adresse email valide (ex: exemple@mail.com)."
@@ -296,12 +297,12 @@ function ReportFoundScreen() {
       }
 
       // Mettre à jour la valeur du téléphone
-      setValue("telephone", phoneNumber);
+      handleChange("telephone", phoneNumber);
     }
 
     if (step === 4) {
       // Validation conditions générales
-      if (!values.acceptTerms) {
+      if (!formData.acceptTerms) {
         Alert.alert(
           "Conditions générales",
           "Vous devez accepter les conditions générales pour pouvoir soumettre votre déclaration."
@@ -341,7 +342,7 @@ function ReportFoundScreen() {
   };
 
   // Soumission du formulaire
-  const onSubmit = async (data) => {
+  const onSubmit = async () => {
     if (!validateStep(currentStep)) return;
 
     setLoading(true);
@@ -350,13 +351,13 @@ function ReportFoundScreen() {
       const imageToUpload = image;
 
       const form = {
-        typeObjet: data.typeObjet,
-        description: data.description,
-        date: new Date().toISOString(), // Date automatique basée sur le moment de la déclaration
-        lieu: data.lieu,
-        numVol: data.numVol,
-        email: data.email,
-        telephone: data.telephone,
+        typeObjet: formData.typeObjet,
+        description: formData.description,
+        date: new Date().toISOString(),
+        lieu: formData.lieu,
+        numVol: formData.numVol,
+        email: formData.email,
+        telephone: formData.telephone,
       };
 
       const { docId, shortCode } = await saveFoundObjectReport(
@@ -364,7 +365,6 @@ function ReportFoundScreen() {
         imageToUpload
       );
 
-      // Alert simple puis navigation directe
       Alert.alert(
         "Succès",
         "Votre déclaration a été enregistrée avec succès !",
@@ -413,7 +413,7 @@ function ReportFoundScreen() {
 
   // Rendu des différentes étapes du formulaire
   const renderStepContent = () => {
-    const isAutre = typeObjet?.trim().toLowerCase() === "autre";
+    const isAutre = formData.typeObjet?.trim().toLowerCase() === "autre";
 
     switch (currentStep) {
       case 1:
@@ -422,37 +422,25 @@ function ReportFoundScreen() {
             <Text style={styles.sectionTitle}>{STEPS[0].title}</Text>
 
             <Text style={styles.fieldLabel}>Type d'objet *</Text>
-            <Controller
-              control={control}
-              name="typeObjet"
-              render={({ field: { onChange, value } }) => (
-                <CustomSelector
-                  label="Sélectionnez un type d'objet"
-                  options={objectTypes}
-                  selectedValue={value}
-                  onSelect={onChange}
-                />
-              )}
+            <CustomSelector
+              label="Sélectionnez un type d'objet"
+              options={objectTypes}
+              selectedValue={formData.typeObjet}
+              onSelect={(value) => handleChange("typeObjet", value)}
             />
 
             <Text style={styles.fieldLabel}>
               Description {isAutre ? "*" : "(optionnel)"}
             </Text>
-            <Controller
-              control={control}
-              name="description"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={[styles.modernInput, styles.textArea]}
-                  value={value || ""}
-                  onChangeText={onChange}
-                  placeholder="Décrivez l'objet en détail (marque, taille, couleur, signes distinctifs...)"
-                  placeholderTextColor={COLORS.textLight}
-                  multiline
-                  numberOfLines={4}
-                  textAlignVertical="top"
-                />
-              )}
+            <TextInput
+              style={[styles.modernInput, styles.textArea]}
+              value={formData.description}
+              onChangeText={(text) => handleChange("description", text)}
+              placeholder="Décrivez l'objet en détail (marque, taille, couleur, signes distinctifs...)"
+              placeholderTextColor={COLORS.textLight}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
             />
             <Text style={styles.helperText}>
               {isAutre
@@ -468,37 +456,25 @@ function ReportFoundScreen() {
             <Text style={styles.sectionTitle}>{STEPS[1].title}</Text>
 
             <Text style={styles.fieldLabel}>Numéro de vol *</Text>
-            <Controller
-              control={control}
-              name="numVol"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.modernInput}
-                  placeholder="ex : AT123, RL456"
-                  placeholderTextColor={COLORS.textLight}
-                  value={value || ""}
-                  onChangeText={onChange}
-                  autoCapitalize="characters"
-                />
-              )}
+            <TextInput
+              style={styles.modernInput}
+              placeholder="ex : AT123, RL456"
+              placeholderTextColor={COLORS.textLight}
+              value={formData.numVol}
+              onChangeText={(text) => handleChange("numVol", text)}
+              autoCapitalize="characters"
             />
             <Text style={styles.helperText}>
               Format attendu: 2 lettres suivies de chiffres
             </Text>
 
             <Text style={styles.fieldLabel}>Lieu de découverte *</Text>
-            <Controller
-              control={control}
-              name="lieu"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.modernInput}
-                  placeholder="ex: Siège 12A, Toilettes, Compartiment bagage..."
-                  placeholderTextColor={COLORS.textLight}
-                  value={value || ""}
-                  onChangeText={onChange}
-                />
-              )}
+            <TextInput
+              style={styles.modernInput}
+              placeholder="ex: Siège 12A, Toilettes, Compartiment bagage..."
+              placeholderTextColor={COLORS.textLight}
+              value={formData.lieu}
+              onChangeText={(text) => handleChange("lieu", text)}
             />
             <Text style={styles.helperText}>
               Soyez le plus précis possible pour faciliter l'identification
@@ -512,30 +488,26 @@ function ReportFoundScreen() {
             <Text style={styles.sectionTitle}>{STEPS[2].title}</Text>
 
             <Text style={styles.fieldLabel}>Email *</Text>
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, value } }) => (
-                <TextInput
-                  style={styles.modernInput}
-                  placeholder="exemple@mail.com"
-                  placeholderTextColor={COLORS.textLight}
-                  value={value || ""}
-                  onChangeText={onChange}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              )}
+            <TextInput
+              style={styles.modernInput}
+              placeholder="exemple@mail.com"
+              placeholderTextColor={COLORS.textLight}
+              value={formData.email}
+              onChangeText={(text) => handleChange("email", text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
             />
 
             <Text style={styles.fieldLabel}>Téléphone *</Text>
             <View style={styles.phoneContainer}>
               <PhoneInput
                 ref={phoneInput}
-                defaultValue=""
+                defaultValue={formData.telephone || ""}
                 defaultCode="MA"
                 layout="first"
-                onChangeFormattedText={(text) => setValue("telephone", text)}
+                onChangeFormattedText={(text) =>
+                  handleChange("telephone", text)
+                }
                 containerStyle={styles.phoneInputContainer}
                 textContainerStyle={styles.phoneTextContainer}
                 textInputStyle={styles.phoneTextInput}
@@ -551,16 +523,6 @@ function ReportFoundScreen() {
         );
 
       case 4:
-        // Récupérer les valeurs uniquement au moment de l'affichage de l'étape 4
-        const step4Values = {
-          typeObjet: getValues("typeObjet"),
-          description: getValues("description"),
-          numVol: getValues("numVol"),
-          lieu: getValues("lieu"),
-          email: getValues("email"),
-          telephone: getValues("telephone"),
-        };
-
         return (
           <View style={styles.formContainer}>
             <Text style={styles.sectionTitle}>{STEPS[3].title}</Text>
@@ -607,15 +569,15 @@ function ReportFoundScreen() {
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Type d'objet:</Text>
                 <Text style={styles.summaryValue}>
-                  {step4Values.typeObjet || "Non défini"}
+                  {formData.typeObjet || "Non défini"}
                 </Text>
               </View>
 
-              {step4Values.description?.trim() && (
+              {formData.description?.trim() && (
                 <View style={styles.summaryItem}>
                   <Text style={styles.summaryLabel}>Description:</Text>
                   <Text style={styles.summaryValue}>
-                    {step4Values.description}
+                    {formData.description}
                   </Text>
                 </View>
               )}
@@ -623,53 +585,50 @@ function ReportFoundScreen() {
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Numéro de vol:</Text>
                 <Text style={styles.summaryValue}>
-                  {step4Values.numVol || "Non défini"}
+                  {formData.numVol || "Non défini"}
                 </Text>
               </View>
 
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Lieu:</Text>
                 <Text style={styles.summaryValue}>
-                  {step4Values.lieu || "Non défini"}
+                  {formData.lieu || "Non défini"}
                 </Text>
               </View>
 
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Email:</Text>
                 <Text style={styles.summaryValue}>
-                  {step4Values.email || "Non défini"}
+                  {formData.email || "Non défini"}
                 </Text>
               </View>
 
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Téléphone:</Text>
                 <Text style={styles.summaryValue}>
-                  {step4Values.telephone || "Non renseigné"}
+                  {formData.telephone || "Non renseigné"}
                 </Text>
               </View>
             </View>
 
-            <Controller
-              control={control}
-              name="acceptTerms"
-              render={({ field: { onChange, value } }) => (
-                <TouchableOpacity
-                  style={styles.checkboxContainer}
-                  onPress={() => onChange(!value)}
-                >
-                  <View
-                    style={[styles.checkbox, value && styles.checkboxChecked]}
-                  >
-                    {value && (
-                      <Ionicons name="checkmark" size={16} color="white" />
-                    )}
-                  </View>
-                  <Text style={styles.checkboxLabel}>
-                    J'accepte les conditions générales
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
+            <TouchableOpacity
+              style={styles.checkboxContainer}
+              onPress={() => handleChange("acceptTerms", !formData.acceptTerms)}
+            >
+              <View
+                style={[
+                  styles.checkbox,
+                  formData.acceptTerms && styles.checkboxChecked,
+                ]}
+              >
+                {formData.acceptTerms && (
+                  <Ionicons name="checkmark" size={16} color="white" />
+                )}
+              </View>
+              <Text style={styles.checkboxLabel}>
+                J'accepte les conditions générales
+              </Text>
+            </TouchableOpacity>
 
             <Text style={styles.consentText}>
               En soumettant ce formulaire, vous acceptez que vos données
@@ -761,7 +720,7 @@ function ReportFoundScreen() {
 
               <TouchableOpacity
                 style={[styles.submitButton, loading && styles.disabledButton]}
-                onPress={handleSubmit(onSubmit)}
+                onPress={onSubmit}
                 disabled={loading}
                 activeOpacity={0.8}
               >

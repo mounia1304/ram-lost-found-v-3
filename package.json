@@ -15,6 +15,7 @@
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/datetimepicker": "8.3.0",
     "@react-native-firebase/app": "^22.2.0",
+    "@react-native-firebase/auth": "^22.2.0",
     "@react-native-firebase/messaging": "^22.2.0",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@react-native-picker/picker": "2.11.0",
@@ -54,7 +55,8 @@
     "react-native-uuid": "2.0.3",
     "react-native-vector-icons": "^10.2.0",
     "react-native-web": "0.20.0",
-    "yup": "1.6.1"
+    "yup": "1.6.1",
+    "expo-media-library": "~17.1.6"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

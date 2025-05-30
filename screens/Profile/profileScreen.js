@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,39 +9,131 @@ import {
   Alert,
   TextInput,
   Image,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { auth, firestore } from "../../services/databaseService/firebaseConfig";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
-export default function UserProfileScreen({ navigation }) {
-  // 🎭 DONNÉES MOCKÉES
+export default function ProfileScreen({ navigation }) {
   const [userInfo, setUserInfo] = useState({
-    displayName: "Ahmed Benali",
-    email: "ahmed.benali@email.com",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
     photoURL: null,
-    phone: "+212 6 12 34 56 78",
   });
-
   const [isEditing, setIsEditing] = useState(false);
   const [tempUserInfo, setTempUserInfo] = useState(userInfo);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleLogout = () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Déconnexion",
-        style: "destructive",
-        onPress: () => {
-          console.log("Déconnexion simulée");
-          Alert.alert("Info", "Déconnexion simulée (pas de Firebase encore)");
-        },
-      },
-    ]);
+  // Récupérer les données de l'utilisateur depuis Firestore
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const currentUser = auth.currentUser;
+      console.log("Current user:", currentUser);
+
+      if (!currentUser) {
+        console.log("Pas d'utilisateur connecté");
+        Alert.alert("Erreur", "Utilisateur non connecté");
+        navigation.navigate("Login");
+        return;
+      }
+
+      console.log("User ID:", currentUser.uid);
+      const userDocRef = doc(firestore, "ownersData", currentUser.uid);
+      console.log("Document référence:", userDocRef);
+
+      const userDoc = await getDoc(userDocRef);
+      console.log("Document existe:", userDoc.exists());
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("Données utilisateur récupérées:", userData);
+
+        const userProfile = {
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          email: userData.email || currentUser.email || "",
+          phone: userData.phone || "",
+          photoURL: userData.photoURL || null,
+        };
+
+        console.log("Profil utilisateur formaté:", userProfile);
+        setUserInfo(userProfile);
+        setTempUserInfo(userProfile);
+      } else {
+        console.log("Document n'existe pas, création avec données de base");
+        // Si le document n'existe pas, créer avec les données de base
+        const basicUserInfo = {
+          firstName: currentUser.displayName?.split(" ")[0] || "",
+          lastName:
+            currentUser.displayName?.split(" ").slice(1).join(" ") || "",
+          email: currentUser.email || "",
+          phone: "",
+          photoURL: currentUser.photoURL || null,
+        };
+        console.log("Infos de base:", basicUserInfo);
+        setUserInfo(basicUserInfo);
+        setTempUserInfo(basicUserInfo);
+      }
+    } catch (error) {
+      console.error("Erreur complète:", error);
+      console.error("Message d'erreur:", error.message);
+      Alert.alert(
+        "Erreur",
+        `Impossible de récupérer les données: ${error.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSaveProfile = () => {
-    setUserInfo(tempUserInfo);
-    setIsEditing(false);
-    Alert.alert("Succès", "Profil mis à jour avec succès");
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        Alert.alert("Erreur", "Utilisateur non connecté");
+        return;
+      }
+
+      // Validation des données
+      if (!tempUserInfo.firstName.trim()) {
+        Alert.alert("Erreur", "Le prénom est requis");
+        return;
+      }
+
+      if (!tempUserInfo.lastName.trim()) {
+        Alert.alert("Erreur", "Le nom de famille est requis");
+        return;
+      }
+
+      // Mettre à jour dans Firestore
+      await updateDoc(doc(firestore, "ownersData", currentUser.uid), {
+        firstName: tempUserInfo.firstName.trim(),
+        lastName: tempUserInfo.lastName.trim(),
+        phone: tempUserInfo.phone.trim(),
+        photoURL: tempUserInfo.photoURL,
+        updatedAt: new Date().toISOString(),
+      });
+
+      setUserInfo(tempUserInfo);
+      setIsEditing(false);
+      Alert.alert("Succès", "Profil mis à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde:", error);
+      Alert.alert("Erreur", "Impossible de sauvegarder les modifications");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -49,10 +141,40 @@ export default function UserProfileScreen({ navigation }) {
     setIsEditing(false);
   };
 
-  const pickImage = () => {
-    console.log("Sélection d'image simulée");
-    Alert.alert("Info", "Sélection d'image simulée");
+  const handleLogout = () => {
+    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Déconnexion",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await signOut(auth);
+            navigation.replace("Login");
+          } catch (error) {
+            console.error("Erreur lors de la déconnexion:", error);
+            Alert.alert("Erreur", "Impossible de se déconnecter");
+          }
+        },
+      },
+    ]);
   };
+
+  const pickImage = () => {
+    // TODO: Implémenter la sélection d'image avec expo-image-picker
+    Alert.alert("Info", "Fonctionnalité de sélection d'image à venir");
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#D80000" />
+          <Text style={styles.loadingText}>Chargement du profil...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   const ProfileHeader = () => (
     <View style={styles.headerGradient}>
@@ -80,8 +202,23 @@ export default function UserProfileScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        <Text style={styles.userName}>{userInfo.displayName}</Text>
+        <Text style={styles.userName}>
+          {userInfo.firstName && userInfo.lastName
+            ? `${userInfo.firstName} ${userInfo.lastName}`
+            : "Nom non renseigné"}
+        </Text>
         <Text style={styles.userEmail}>{userInfo.email}</Text>
+
+        {/* Bouton debug pour recharger */}
+        <TouchableOpacity
+          style={styles.debugButton}
+          onPress={() => {
+            setLoading(true);
+            fetchUserData();
+          }}
+        >
+          <Text style={styles.debugButtonText}>🔄 Recharger</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -129,31 +266,44 @@ export default function UserProfileScreen({ navigation }) {
     onPress,
     color = "#D80000",
     variant = "filled",
+    disabled = false,
   }) => (
     <TouchableOpacity
       style={[
         styles.actionButton,
         variant === "outlined" && styles.actionButtonOutlined,
+        disabled && styles.actionButtonDisabled,
       ]}
       onPress={onPress}
+      disabled={disabled}
     >
       <View
         style={[
           styles.actionButtonContent,
           variant === "filled"
-            ? { backgroundColor: color }
-            : { borderColor: color, backgroundColor: "white" },
+            ? { backgroundColor: disabled ? "#ccc" : color }
+            : {
+                borderColor: disabled ? "#ccc" : color,
+                backgroundColor: "white",
+              },
         ]}
       >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={variant === "filled" ? "white" : color}
-        />
+        {disabled ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Ionicons
+            name={icon}
+            size={20}
+            color={variant === "filled" ? "white" : color}
+          />
+        )}
         <Text
           style={[
             styles.actionButtonText,
-            { color: variant === "filled" ? "white" : color },
+            {
+              color: variant === "filled" ? "white" : disabled ? "#ccc" : color,
+              marginLeft: disabled ? 8 : 8,
+            },
           ]}
         >
           {title}
@@ -173,14 +323,21 @@ export default function UserProfileScreen({ navigation }) {
         <View style={styles.content}>
           <InfoSection title="Informations personnelles">
             <InfoItem
-              label="Nom complet"
-              value={
-                isEditing ? tempUserInfo.displayName : userInfo.displayName
-              }
+              label="Prénom"
+              value={isEditing ? tempUserInfo.firstName : userInfo.firstName}
               icon="person-outline"
               editable={true}
               onChangeText={(text) =>
-                setTempUserInfo((prev) => ({ ...prev, displayName: text }))
+                setTempUserInfo((prev) => ({ ...prev, firstName: text }))
+              }
+            />
+            <InfoItem
+              label="Nom de famille"
+              value={isEditing ? tempUserInfo.lastName : userInfo.lastName}
+              icon="person-outline"
+              editable={true}
+              onChangeText={(text) =>
+                setTempUserInfo((prev) => ({ ...prev, lastName: text }))
               }
             />
             <InfoItem
@@ -210,6 +367,7 @@ export default function UserProfileScreen({ navigation }) {
                     icon="checkmark"
                     onPress={handleSaveProfile}
                     color="#4ECDC4"
+                    disabled={saving}
                   />
                 </View>
                 <View style={styles.editActionButton}>
@@ -219,6 +377,7 @@ export default function UserProfileScreen({ navigation }) {
                     onPress={handleCancelEdit}
                     variant="outlined"
                     color="#8E8E93"
+                    disabled={saving}
                   />
                 </View>
               </View>
@@ -230,19 +389,19 @@ export default function UserProfileScreen({ navigation }) {
                   onPress={() => setIsEditing(true)}
                 />
                 <ActionButton
-                  title="Mes objets perdus (3)"
+                  title="Mes objets perdus"
                   icon="sad-outline"
-                  onPress={() => console.log("Navigate to My Lost Items")}
+                  onPress={() => navigation.navigate("MyLostItems")}
                 />
                 <ActionButton
-                  title="Mes objets trouvés (1)"
+                  title="Mes objets trouvés"
                   icon="happy-outline"
-                  onPress={() => console.log("Navigate to My Found Items")}
+                  onPress={() => navigation.navigate("MyFoundItems")}
                 />
                 <ActionButton
-                  title="Historique des matches (2)"
+                  title="Historique des matches"
                   icon="link-outline"
-                  onPress={() => console.log("Navigate to Match History")}
+                  onPress={() => navigation.navigate("MatchHistory")}
                 />
               </>
             )}
@@ -252,17 +411,17 @@ export default function UserProfileScreen({ navigation }) {
             <ActionButton
               title="Notifications"
               icon="notifications-outline"
-              onPress={() => console.log("Navigate to Notification Settings")}
+              onPress={() => navigation.navigate("NotificationSettings")}
             />
             <ActionButton
               title="Confidentialité"
               icon="shield-outline"
-              onPress={() => console.log("Navigate to Privacy Settings")}
+              onPress={() => navigation.navigate("PrivacySettings")}
             />
             <ActionButton
               title="Aide et support"
               icon="help-circle-outline"
-              onPress={() => console.log("Navigate to Help")}
+              onPress={() => navigation.navigate("Help")}
             />
           </InfoSection>
 
@@ -288,6 +447,16 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#666",
   },
   headerGradient: {
     backgroundColor: "#D80000",
@@ -341,6 +510,17 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 16,
     color: "rgba(255, 255, 255, 0.8)",
+  },
+  debugButton: {
+    marginTop: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 15,
+  },
+  debugButtonText: {
+    color: "white",
+    fontSize: 14,
   },
   content: {
     padding: 20,
@@ -416,6 +596,9 @@ const styles = StyleSheet.create({
   },
   actionButtonOutlined: {
     // Style pour les boutons outlined
+  },
+  actionButtonDisabled: {
+    opacity: 0.7,
   },
   actionButtonContent: {
     flexDirection: "row",

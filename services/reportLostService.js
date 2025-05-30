@@ -100,6 +100,7 @@ export const saveLostObjectReport = async (data, imageUri) => {
       email: data.email.trim().toLowerCase(),
       phone: data.phone.trim(),
       PNR: data.pnr.trim(),
+      userId,
       createdAt: Timestamp.now(),
     });
     const ownerId = ownerDoc.id;
