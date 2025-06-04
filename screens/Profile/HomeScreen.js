@@ -107,8 +107,8 @@ const HomeScreen = ({ navigation }) => {
           return { color: "#d9534f", label: "Perdu", icon: "search" };
         case "found":
           return { color: "#5cb85c", label: "Trouvé", icon: "flag" };
-        case "match":
-          return { color: "#0275d8", label: "Match", icon: "compare-arrows" };
+        case "matched":
+          return { color: "#0275d8", label: "Matché", icon: "compare-arrows" };
         default:
           return { color: "#999", label: "Autre", icon: "info" };
       }

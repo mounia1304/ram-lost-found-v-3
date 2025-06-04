@@ -15,7 +15,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import PhoneInput from "react-native-phone-number-input";
+// Remplacer l'import PhoneInput par notre composant
+import PhoneInput from "../../components/PhoneNumberInput";
 import { saveLostObjectReport } from "../../services/reportLostService";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../services/databaseService/firebaseConfig";
@@ -53,12 +54,13 @@ const AVAILABLE_COLORS = [
   { name: "Multi-couleur", value: "multicolore" },
 ];
 
-// Composant de sélecteur personnalisé pour remplacer le Picker
 const CustomSelector = ({ label, options, selectedValue, onSelect }) => {
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Vérification de sécurité pour les options
-  const safeOptions = Array.isArray(options) ? options : [];
+  const handleSelect = (value) => {
+    onSelect(value); // Appelle la fonction parente
+    setModalVisible(false); // Ferme le modal
+  };
 
   return (
     <View>
@@ -87,22 +89,26 @@ const CustomSelector = ({ label, options, selectedValue, onSelect }) => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{label}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <TouchableOpacity
+                onPress={() => setModalVisible(false)}
+                hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+              >
                 <Ionicons name="close" size={24} color={COLORS.text} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={styles.optionsList}>
-              {safeOptions.map((option, index) => (
+            <ScrollView
+              style={styles.optionsList}
+              keyboardShouldPersistTaps="handled"
+            >
+              {options.map((option, index) => (
                 <TouchableOpacity
                   key={index}
                   style={[
                     styles.optionItem,
                     selectedValue === option && styles.selectedOption,
                   ]}
-                  onPress={() => {
-                    onSelect(option);
-                    setModalVisible(false);
-                  }}
+                  onPress={() => handleSelect(option)}
+                  activeOpacity={0.7}
                 >
                   <Text
                     style={[
@@ -145,6 +151,10 @@ const ReportLostScreen = ({ navigation }) => {
     additionalDetails: "",
   });
 
+  // NOUVEAUX ÉTATS pour le téléphone
+  const [phoneData, setPhoneData] = useState(null);
+  const [phoneError, setPhoneError] = useState("");
+
   // État pour l'image
   const [image, setImage] = useState(null);
 
@@ -154,7 +164,6 @@ const ReportLostScreen = ({ navigation }) => {
   // État progression du formulaire
   const [currentStep, setCurrentStep] = useState(1);
   const scrollViewRef = useRef();
-  const phoneInput = useRef(null);
 
   // État pour l'authentification
   const [authChecked, setAuthChecked] = useState(false);
@@ -189,6 +198,7 @@ const ReportLostScreen = ({ navigation }) => {
           }));
         }
 
+        // Gérer le numéro de téléphone pré-rempli
         if (user.phoneNumber) {
           setFormData((prev) => ({
             ...prev,
@@ -206,6 +216,24 @@ const ReportLostScreen = ({ navigation }) => {
     // Nettoyer l'abonnement lors du démontage du composant
     return () => unsubscribe();
   }, []);
+
+  // NOUVELLE FONCTION pour gérer le changement de téléphone
+  const handlePhoneChange = (phoneDataReceived) => {
+    setPhoneData(phoneDataReceived);
+
+    // Mettre à jour formData.phone avec le numéro complet formaté
+    setFormData((prev) => ({
+      ...prev,
+      phone: phoneDataReceived.fullNumber || phoneDataReceived.raw || "",
+    }));
+
+    // Gérer les erreurs de validation
+    if (phoneDataReceived.raw && !phoneDataReceived.isValid) {
+      setPhoneError("Numéro de téléphone invalide");
+    } else {
+      setPhoneError("");
+    }
+  };
 
   // Fonction pour rediriger vers l'authentification
   const redirectToAuth = () => {
@@ -234,6 +262,7 @@ const ReportLostScreen = ({ navigation }) => {
 
   // Fonctions gestion formulaire avec vérifications de sécurité
   const updateFormField = (field, value) => {
+    console.log(`Updating ${field} with:`, value); // Log de débogage
     if (typeof field === "string" && field.length > 0) {
       setFormData((prev) => ({
         ...prev,
@@ -297,7 +326,7 @@ const ReportLostScreen = ({ navigation }) => {
     return pnrRegex.test(pnr);
   };
 
-  // Fonction pour valider l'étape actuelle
+  // FONCTION DE VALIDATION MISE À JOUR pour le téléphone
   const validateCurrentStep = () => {
     if (currentStep === 1) {
       // Validation des informations personnelles
@@ -307,8 +336,12 @@ const ReportLostScreen = ({ navigation }) => {
         return "L'email est requis";
       if (!/^\S+@\S+\.\S+$/.test(formData.email))
         return "Format d'email invalide";
-      if (!formData.phone || !formData.phone.trim())
-        return "Le numéro de téléphone est requis";
+
+      // NOUVELLE VALIDATION pour le téléphone
+      if (!phoneData || !phoneData.isValid) {
+        return "Le numéro de téléphone est requis et doit être valide";
+      }
+
       if (!formData.pnr || !formData.pnr.trim()) return "Le PNR est requis";
       if (!validatePNR(formData.pnr))
         return "Le PNR doit contenir exactement 6 caractères (lettres et chiffres)";
@@ -381,9 +414,13 @@ const ReportLostScreen = ({ navigation }) => {
         return;
       }
 
-      // Préparer les données finales
+      // Préparer les données finales avec les nouvelles données de téléphone
       const finalData = {
         ...formData,
+        // Inclure les données complètes du téléphone
+        phoneCountry: phoneData?.countryCode || "",
+        phoneFormatted: phoneData?.formatted || "",
+        phoneCallingCode: phoneData?.callingCode || "",
       };
 
       // Envoyer à Firebase
@@ -467,21 +504,20 @@ const ReportLostScreen = ({ navigation }) => {
               autoCapitalize="none"
             />
 
-            <Text style={styles.fieldLabel}>Téléphone *</Text>
-            <PhoneInput
-              ref={phoneInput}
-              defaultValue={formData.phone || ""}
-              defaultCode="MA"
-              layout="first"
-              onChangeText={(text) => updateFormField("phone", text)}
-              onChangeFormattedText={(text) => updateFormField("phone", text)}
-              containerStyle={styles.phoneContainer}
-              textContainerStyle={styles.phoneTextContainer}
-              textInputStyle={styles.phoneInput}
-              codeTextStyle={styles.phoneCodeText}
-              flagButtonStyle={styles.phoneFlagButton}
-              placeholder="Numéro de téléphone"
-            />
+            {/* REMPLACEMENT du PhoneInput par WebCompatiblePhoneInput */}
+            <View style={styles.phoneFieldContainer}>
+              <PhoneInput
+                label="Téléphone *"
+                defaultCountry="MA"
+                onPhoneChange={handlePhoneChange}
+                placeholder="Entrez votre numéro"
+                preferredCountries={["MA", "FR", "ES", "DZ", "TN"]}
+                excludeCountries={["AF", "KP", "IR", "SY", "IQ"]}
+              />
+              {phoneError && (
+                <Text style={styles.phoneErrorText}>{phoneError}</Text>
+              )}
+            </View>
 
             <Text style={styles.fieldLabel}>PNR *</Text>
             <TextInput
@@ -514,9 +550,12 @@ const ReportLostScreen = ({ navigation }) => {
             <Text style={styles.fieldLabel}>Type d'objet *</Text>
             <CustomSelector
               label="Sélectionnez un type d'objet"
-              options={objectTypes || []}
+              options={objectTypes}
               selectedValue={formData.type}
-              onSelect={(value) => updateFormField("type", value)}
+              onSelect={(value) => {
+                console.log("Valeur sélectionnée:", value); // Ajoutez ce log
+                updateFormField("type", value);
+              }}
             />
 
             <Text style={styles.fieldLabel}>Lieu de perte *</Text>
@@ -646,7 +685,9 @@ const ReportLostScreen = ({ navigation }) => {
 
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Téléphone:</Text>
-                <Text style={styles.summaryValue}>{formData.phone || ""}</Text>
+                <Text style={styles.summaryValue}>
+                  {phoneData?.formatted || formData.phone || ""}
+                </Text>
               </View>
 
               <View style={styles.summaryRow}>
@@ -887,27 +928,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontStyle: "italic",
   },
-  phoneContainer: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9",
-    width: "100%",
+  // NOUVEAUX STYLES pour le champ téléphone
+  phoneFieldContainer: {
+    marginTop: 16,
   },
-  phoneTextContainer: {
-    backgroundColor: "#f9f9f9",
-    borderRadius: 8,
-  },
-  phoneInput: {
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  phoneCodeText: {
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  phoneFlagButton: {
-    borderRadius: 8,
+  phoneErrorText: {
+    fontSize: 12,
+    color: COLORS.error,
+    marginTop: 5,
+    marginLeft: 5,
   },
   selectorButton: {
     flexDirection: "row",
@@ -934,10 +963,9 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: "85%",
-    maxHeight: "80%",
+    maxHeight: "70%",
     backgroundColor: "white",
     borderRadius: 10,
-    padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
@@ -948,8 +976,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 15,
-    paddingBottom: 15,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "#eee",
   },
@@ -958,27 +985,33 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.text,
   },
+  closeButton: {
+    padding: 5,
+  },
   optionsList: {
-    maxHeight: 300,
+    maxHeight: 400,
+    paddingHorizontal: 20,
   },
   optionItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 5,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: "#f0f0f0",
+    minHeight: 50,
   },
   selectedOption: {
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f0f8ff",
   },
   optionText: {
     fontSize: 16,
     color: COLORS.text,
+    flex: 1,
   },
   selectedOptionText: {
-    fontWeight: "bold",
+    fontWeight: "600",
     color: COLORS.primary,
   },
   colorContainer: {
@@ -1190,4 +1223,5 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.secondary,
   },
 });
+
 export default ReportLostScreen;

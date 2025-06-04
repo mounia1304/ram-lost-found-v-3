@@ -11,12 +11,12 @@ import {
   Dimensions,
   TextInput,
   Modal,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-// Dimensions
+
 const { width, height } = Dimensions.get("window");
 
-// Couleurs RAM
 const COLORS = {
   primary: "#c2002f",
   primaryDark: "#a4001f",
@@ -31,7 +31,6 @@ const COLORS = {
   card: "#ffffff",
 };
 
-// Images
 const ramLogo = {
   uri: "https://www.royalairmaroc.com/content/dam/royal-air-maroc/Static/logo_ram_arabic-english.png",
 };
@@ -40,35 +39,34 @@ const headerBg = {
 };
 
 const HomeScreen = ({ navigation }) => {
-  // États
   const [isAtlasVisible, setIsAtlasVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("lost");
   const [isMenuVisible, setIsMenuVisible] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState("FR");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Animations
   const scrollY = useRef(new Animated.Value(0)).current;
+
   const headerHeight = scrollY.interpolate({
-    inputRange: [0, 120],
-    outputRange: [180, 80], // Réduit de 200 à 180 pour moins d'espace
+    inputRange: [0, 80],
+    outputRange: [140, 80],
     extrapolate: "clamp",
   });
 
   const headerTitleOpacity = scrollY.interpolate({
-    inputRange: [80, 120],
+    inputRange: [40, 80],
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
 
   const headerContentOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
+    inputRange: [0, 40],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
 
   const atlasAnimation = useRef(new Animated.Value(0)).current;
 
-  // Effet pour animer la bulle Atlas
   useEffect(() => {
     Animated.timing(atlasAnimation, {
       toValue: isAtlasVisible ? 1 : 0,
@@ -77,7 +75,6 @@ const HomeScreen = ({ navigation }) => {
     }).start();
   }, [isAtlasVisible]);
 
-  // Transformation pour Atlas
   const atlasTransform = {
     transform: [
       {
@@ -90,7 +87,17 @@ const HomeScreen = ({ navigation }) => {
     opacity: atlasAnimation,
   };
 
-  // Fonctions
+  const handleAuthenticatedNavigation = (screen) => {
+    if (!isAuthenticated) {
+      navigation.navigate("Login", {
+        returnTo: screen,
+        message: "Veuillez vous connecter pour continuer",
+      });
+    } else {
+      handleNavigate(screen);
+    }
+  };
+
   const toggleAtlas = () => {
     setIsAtlasVisible(!isAtlasVisible);
   };
@@ -101,7 +108,6 @@ const HomeScreen = ({ navigation }) => {
 
   const handleNavigate = (screen) => {
     console.log(`Navigating to ${screen}`);
-    // Navigation logique ici
     if (navigation) {
       navigation.navigate(screen);
     }
@@ -112,7 +118,6 @@ const HomeScreen = ({ navigation }) => {
     setIsMenuVisible(false);
   };
 
-  // Rendu du menu de langue
   const renderLanguageMenu = () => {
     return (
       <Modal
@@ -179,7 +184,7 @@ const HomeScreen = ({ navigation }) => {
               style={styles.menuItem}
               onPress={() => {
                 setIsMenuVisible(false);
-                handleNavigate("Profile");
+                handleAuthenticatedNavigation("profileTabs");
               }}
             >
               <Ionicons
@@ -212,7 +217,6 @@ const HomeScreen = ({ navigation }) => {
     );
   };
 
-  // Obtenir le sous-titre en fonction de l'onglet actif
   const getTabSubtitle = () => {
     if (activeTab === "lost") {
       return "Retrouvez vos objets personnels perdus dans les aéroports ou pendant vos vols";
@@ -225,7 +229,6 @@ const HomeScreen = ({ navigation }) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
 
-      {/* Header animé */}
       <Animated.View style={[styles.header, { height: headerHeight }]}>
         <Image source={headerBg} style={styles.headerBg} />
         <View style={styles.headerOverlay} />
@@ -263,7 +266,6 @@ const HomeScreen = ({ navigation }) => {
         </View>
       </Animated.View>
 
-      {/* Onglets avec marges réduites */}
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, activeTab === "lost" && styles.activeTab]}
@@ -304,7 +306,6 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {/* Contenu principal */}
       <Animated.ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -315,18 +316,16 @@ const HomeScreen = ({ navigation }) => {
         )}
         scrollEventThrottle={16}
       >
-        {/* Sous-titre du service */}
         <View style={styles.serviceDescriptionContainer}>
           <Text style={styles.serviceDescription}>{getTabSubtitle()}</Text>
         </View>
 
-        {/* 1. Boutons d'action rapide */}
         <View style={styles.quickActionsContainer}>
           <TouchableOpacity
             style={styles.mainActionButton}
             onPress={() => {
               if (activeTab === "lost") {
-                handleNavigate("ReportLost");
+                handleAuthenticatedNavigation("ReportLost");
               } else {
                 handleNavigate("FoundChoice");
               }
@@ -344,7 +343,7 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.smallActionsRow}>
             <TouchableOpacity
               style={styles.smallActionButton}
-              onPress={() => handleNavigate("Profile")}
+              onPress={() => handleAuthenticatedNavigation("profileTabs")}
             >
               <View style={styles.smallActionIconContainer}>
                 <Ionicons name="list" size={22} color={COLORS.primary} />
@@ -354,7 +353,7 @@ const HomeScreen = ({ navigation }) => {
 
             <TouchableOpacity
               style={styles.smallActionButton}
-              onPress={() => handleNavigate("SearchReport")}
+              onPress={() => handleNavigate("SearchDoc")}
             >
               <View style={styles.smallActionIconContainer}>
                 <Ionicons name="locate" size={22} color={COLORS.primary} />
@@ -364,7 +363,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* 2. Comment ça marche */}
         <View style={styles.howItWorksContainer}>
           <Text style={styles.sectionTitle}>Comment ça marche ?</Text>
 
@@ -412,7 +410,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* 3. Conseils utiles */}
         <View style={styles.tipsContainer}>
           <Text style={styles.sectionTitle}>Conseils utiles</Text>
 
@@ -464,7 +461,6 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* 4. Stats */}
         <View style={styles.statsContainer}>
           <Text style={styles.sectionTitle}>Nos performances</Text>
 
@@ -502,61 +498,61 @@ const HomeScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {/* 5. Contacts */}
         <View style={styles.contactContainer}>
-          <View style={styles.contactGradient}></View>
-          <Text style={styles.contactTitle}>Besoin d'aide ?</Text>
-          <Text style={styles.contactDescription}>
-            Notre service client est disponible pour vous aider à retrouver vos
-            objets perdus.
-          </Text>
+          <View style={styles.contactContent}>
+            <Text style={styles.contactTitle}>Besoin d'aide ?</Text>
+            <Text style={styles.contactDescription}>
+              Notre service client est disponible pour vous aider à retrouver
+              vos objets perdus.
+            </Text>
 
-          <View style={styles.contactButtonsRow}>
-            <TouchableOpacity style={styles.contactButton}>
-              <Ionicons
-                name="call-outline"
-                size={20}
-                color={COLORS.secondary}
-              />
-              <Text style={styles.contactButtonText}>Appeler</Text>
-            </TouchableOpacity>
+            <View style={styles.contactButtonsRow}>
+              <TouchableOpacity style={styles.contactButton}>
+                <Ionicons
+                  name="call-outline"
+                  size={20}
+                  color={COLORS.secondary}
+                />
+                <Text style={styles.contactButtonText}>Appeler</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity style={styles.contactButton}>
-              <Ionicons
-                name="mail-outline"
-                size={20}
-                color={COLORS.secondary}
-              />
-              <Text style={styles.contactButtonText}>Email</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.contactInfoRow}>
-            <View style={styles.contactInfoItem}>
-              <Ionicons
-                name="time-outline"
-                size={18}
-                color="rgba(255,255,255,0.8)"
-              />
-              <Text style={styles.contactInfoText}>Lun-Ven: 8h-18h</Text>
+              <TouchableOpacity style={styles.contactButton}>
+                <Ionicons
+                  name="mail-outline"
+                  size={20}
+                  color={COLORS.secondary}
+                />
+                <Text style={styles.contactButtonText}>Email</Text>
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.contactInfoItem}>
-              <Ionicons
-                name="globe-outline"
-                size={18}
-                color="rgba(255,255,255,0.8)"
-              />
-              <Text style={styles.contactInfoText}>Assistance multilingue</Text>
+            <View style={styles.contactInfoRow}>
+              <View style={styles.contactInfoItem}>
+                <Ionicons
+                  name="time-outline"
+                  size={18}
+                  color="rgba(255,255,255,0.8)"
+                />
+                <Text style={styles.contactInfoText}>Lun-Ven: 8h-18h</Text>
+              </View>
+
+              <View style={styles.contactInfoItem}>
+                <Ionicons
+                  name="globe-outline"
+                  size={18}
+                  color="rgba(255,255,255,0.8)"
+                />
+                <Text style={styles.contactInfoText}>
+                  Assistance multilingue
+                </Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* Espace supplémentaire */}
         <View style={styles.bottomSpace} />
       </Animated.ScrollView>
 
-      {/* Menu de langue */}
       {renderLanguageMenu()}
     </View>
   );
@@ -611,6 +607,7 @@ const styles = StyleSheet.create({
     bottom: 10,
     left: 0,
     right: 0,
+    marginBottom: 0,
   },
   headerTitle: {
     color: "white",
@@ -618,7 +615,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   headerMainContent: {
-    marginBottom: 20,
+    marginBottom: 15,
     alignItems: "center",
   },
   welcomeText: {
@@ -640,7 +637,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "white",
     marginHorizontal: 20,
-    marginTop: 190, // Réduit de 210 à 190 pour réduire l'espace
+    marginTop: 150,
     borderRadius: 10,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -648,6 +645,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     zIndex: 20,
+    marginTop: 115,
+    marginBottom: 0,
   },
   tab: {
     flex: 1,
@@ -665,6 +664,7 @@ const styles = StyleSheet.create({
     color: COLORS.textLight,
     fontWeight: "500",
     marginLeft: 8,
+    marginTop: 0,
   },
   activeTabText: {
     color: COLORS.primary,
@@ -672,10 +672,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    marginTop: 20, // Réduit de 40 à 20
+    marginTop: 10,
   },
   scrollContent: {
-    paddingTop: 40,
+    paddingTop: 20,
     paddingBottom: 30,
   },
   serviceDescriptionContainer: {
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 16,
-    backgroundColor: COLORS.primary, // Utiliser une couleur solide au lieu d'un gradient
+    backgroundColor: COLORS.primary,
   },
   actionButtonText: {
     color: "white",
@@ -895,10 +895,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  contactGradient: {
-    padding: 20,
     backgroundColor: COLORS.secondary,
+  },
+  contactContent: {
+    padding: 20,
   },
   contactTitle: {
     fontSize: 18,
@@ -961,7 +961,6 @@ const styles = StyleSheet.create({
     elevation: 5,
     zIndex: 30,
   },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",

@@ -1,402 +1,535 @@
-// screens/SearchReportScreen.js
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
-  StyleSheet,
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
   ActivityIndicator,
-  SafeAreaView,
-  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
   Alert,
-  StatusBar,
+  TouchableOpacity,
+  Image,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { BarCodeScanner } from "expo-barcode-scanner";
-import { getLostReportByIref } from "../services/reportLostService";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { Feather, Ionicons } from "@expo/vector-icons";
+import { firestore } from "../services/databaseService/firebaseConfig";
 
-const SearchReportScreen = ({ navigation }) => {
-  const [reference, setReference] = useState("");
+// Couleurs RAM basées sur la palette fournie
+const COLORS = {
+  primary: "#C20831",
+  secondary: "#A22032",
+  tertiary: "#B49360",
+  neutral0: "#FFFFFF",
+  neutral100: "#FAFAFA",
+  neutral200: "#EBEAE8",
+  neutral500: "#C2C1BE",
+  neutral700: "#7B7A78",
+  neutral900: "#333231",
+  textDefault: "#595855",
+  textInverse: "#FFFFFF",
+  textLight: "#999999",
+  textDark: "#1A1717",
+  backgroundDefault: "#FFFFFF",
+  backgroundAlternative: "#F7F7F7",
+  backgroundAccent1: "#F0DDDD",
+  backgroundAccent2: "#F6F2ED",
+  borderDefault: "#D8D7D4",
+  borderDark: "#929292",
+  iconDefault: "#C20831",
+  positive: "#00875D",
+  negative: "#A90044",
+  caution: "#B7501F",
+  informative: "#2790F1",
+};
+
+export default function ClaimLookupScreen({ navigation }) {
+  const [ref, setRef] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [scannerVisible, setScannerVisible] = useState(false);
-  const [hasPermission, setHasPermission] = useState(null);
+  const [objectData, setObjectData] = useState(null);
 
-  // Demander la permission pour utiliser la caméra
-  useEffect(() => {
-    (async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
-
-  // Gérer le scan d'un code QR
-  const handleBarCodeScanned = ({ type, data }) => {
-    setScannerVisible(false);
-    if (data) {
-      // Supposer que le QR contient directement l'ID du document
-      searchByDocId(data);
-    }
-  };
-
-  // Recherche par référence
-  const handleReferenceSearch = async () => {
-    if (!reference.trim()) {
-      setError("Veuillez entrer une référence");
-      return;
-    }
+  const searchByRef = async () => {
+    if (!ref.trim())
+      return Alert.alert("Erreur", "Veuillez entrer une référence valide.");
 
     setLoading(true);
-    setError(null);
+    setObjectData(null);
 
     try {
-      const result = await getLostReportByIref(reference);
-
-      if (result) {
-        // Si un résultat est trouvé, naviguer vers l'écran de détail
-        navigation.navigate("ReportDetail", { report: result });
-      } else {
-        setError("Aucun rapport trouvé avec cette référence");
-      }
-    } catch (err) {
-      console.error("Erreur de recherche:", err);
-      setError(err.message || "Une erreur est survenue lors de la recherche");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Recherche par ID du document (après scan QR)
-  const searchByDocId = async (docId) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await getReportById(docId);
-
-      if (result) {
-        // Si un résultat est trouvé, naviguer vers l'écran de détail
-        navigation.navigate("ReportDetail", { report: result });
-      } else {
-        setError("Aucun rapport trouvé avec cet identifiant");
-      }
-    } catch (err) {
-      console.error("Erreur de recherche par ID:", err);
-      setError(err.message || "Une erreur est survenue lors de la recherche");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Gérer l'ouverture du scanner
-  const openScanner = () => {
-    if (hasPermission === null) {
-      Alert.alert("Permission", "Demande d'accès à la caméra en cours...");
-      return;
-    }
-
-    if (hasPermission === false) {
-      Alert.alert(
-        "Permission refusée",
-        "Veuillez autoriser l'accès à la caméra dans les paramètres"
+      const q = query(
+        collection(firestore, "lostObjects"),
+        where("ref", "==", ref.trim())
       );
-      return;
-    }
 
-    setScannerVisible(true);
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        setObjectData({ id: doc.id, ...doc.data() });
+      } else {
+        Alert.alert("Introuvable", "Aucun objet trouvé avec cette référence.");
+      }
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Erreur", "Une erreur est survenue lors de la recherche.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderStatusBlock = () => {
+    if (!objectData?.status) return null;
+
+    const status = objectData.status;
+    const contactBlock = (
+      <View style={styles.contactBox}>
+        <Text style={styles.contactTitle}>
+          <Ionicons name="call" size={16} color={COLORS.primary} /> Contactez le
+          Service Objets Trouvés
+        </Text>
+        <Text style={styles.contactText}>
+          <Ionicons name="mail" size={14} color={COLORS.secondary} />{" "}
+          lostfound@royalairmaroc.com
+        </Text>
+        <Text style={styles.contactText}>
+          <Ionicons name="phone-portrait" size={14} color={COLORS.secondary} />{" "}
+          +212 522 48 97 97
+        </Text>
+      </View>
+    );
+
+    switch (status) {
+      case "lost":
+        return (
+          <View style={styles.statusContainer}>
+            <View
+              style={[
+                styles.statusIcon,
+                { backgroundColor: COLORS.backgroundSemanticInformative },
+              ]}
+            >
+              <Ionicons name="time" size={20} color={COLORS.informative} />
+            </View>
+            <View style={styles.statusTextContainer}>
+              <Text style={styles.statusTitle}>Déclaration enregistrée</Text>
+              <Text style={styles.statusDescription}>
+                Votre déclaration est en cours d'analyse par notre équipe.
+              </Text>
+            </View>
+          </View>
+        );
+      case "matched":
+        return (
+          <View>
+            <View style={styles.statusContainer}>
+              <View
+                style={[
+                  styles.statusIcon,
+                  { backgroundColor: COLORS.backgroundSemanticPositive },
+                ]}
+              >
+                <Ionicons name="search" size={20} color={COLORS.positive} />
+              </View>
+              <View style={styles.statusTextContainer}>
+                <Text style={styles.statusTitle}>Correspondance trouvée !</Text>
+                <Text style={styles.statusDescription}>
+                  Nous avons trouvé un objet correspondant à votre description.
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.detailsButton}
+              onPress={() => navigation.navigate("profileTabs")}
+            >
+              <Text style={styles.detailsButtonText}>Voir les détails</Text>
+              <Ionicons
+                name="arrow-forward"
+                size={16}
+                color={COLORS.textInverse}
+              />
+            </TouchableOpacity>
+          </View>
+        );
+      case "confirmed":
+        return (
+          <View>
+            <View style={styles.statusContainer}>
+              <View
+                style={[
+                  styles.statusIcon,
+                  { backgroundColor: COLORS.backgroundSemanticPositive },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-circle"
+                  size={20}
+                  color={COLORS.positive}
+                />
+              </View>
+              <View style={styles.statusTextContainer}>
+                <Text style={styles.statusTitle}>Objet identifié</Text>
+                <Text style={styles.statusDescription}>
+                  Notre service vous contactera sous peu pour organiser la
+                  restitution.
+                </Text>
+              </View>
+            </View>
+            {contactBlock}
+          </View>
+        );
+      case "returned":
+        return (
+          <View>
+            <View style={styles.statusContainer}>
+              <View
+                style={[
+                  styles.statusIcon,
+                  { backgroundColor: COLORS.backgroundSemanticPositive },
+                ]}
+              >
+                <Ionicons
+                  name="checkmark-done"
+                  size={20}
+                  color={COLORS.positive}
+                />
+              </View>
+              <View style={styles.statusTextContainer}>
+                <Text style={styles.statusTitle}>Objet restitué</Text>
+                <Text style={styles.statusDescription}>
+                  Cet objet a déjà été récupéré par son propriétaire.
+                </Text>
+              </View>
+            </View>
+            {contactBlock}
+          </View>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Recherche de réclamation</Text>
-      </View>
-
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>
-            Entrez la référence de votre réclamation
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: REF12345"
-              value={reference}
-              onChangeText={setReference}
-              placeholderTextColor="#999"
-              autoCapitalize="characters"
-              returnKeyType="search"
-              onSubmitEditing={handleReferenceSearch}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* En-tête RAM */}
+          <View style={styles.header}>
+            <Image
+              source={require("../assets/logoRam.png")}
+              style={styles.logo}
+              resizeMode="contain"
             />
-
-            <TouchableOpacity
-              style={styles.searchButton}
-              onPress={handleReferenceSearch}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Ionicons name="search" size={22} color="#fff" />
-              )}
-            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Suivi des Objets Trouvés</Text>
+            <Text style={styles.headerSubtitle}>Royal Air Maroc</Text>
           </View>
 
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          <View style={styles.divider}>
-            <View style={styles.line} />
-            <Text style={styles.orText}>OU</Text>
-            <View style={styles.line} />
-          </View>
-
-          <TouchableOpacity
-            style={styles.qrButton}
-            onPress={openScanner}
-            disabled={loading}
-          >
-            <Ionicons
-              name="qr-code"
-              size={22}
-              color="#fff"
-              style={styles.qrIcon}
-            />
-            <Text style={styles.qrButtonText}>Scanner un QR code</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Modal pour le scanner de QR code */}
-      <Modal
-        visible={scannerVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setScannerVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <SafeAreaView style={styles.scannerContainer}>
-            <View style={styles.scannerHeader}>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setScannerVisible(false)}
-              >
-                <Ionicons name="close" size={26} color="#fff" />
-              </TouchableOpacity>
-              <Text style={styles.scannerTitle}>Scanner le QR code</Text>
-            </View>
-
-            <BarCodeScanner
-              onBarCodeScanned={handleBarCodeScanned}
-              style={styles.scanner}
-            />
-
-            <View style={styles.scannerFrame}>
-              <View style={styles.scannerTargetCorner1} />
-              <View style={styles.scannerTargetCorner2} />
-              <View style={styles.scannerTargetCorner3} />
-              <View style={styles.scannerTargetCorner4} />
-            </View>
-
-            <Text style={styles.scanInstruction}>
-              Placez le QR code au centre du cadre
+          {/* Carte de recherche */}
+          <View style={styles.card}>
+            <Text style={styles.title}>Rechercher une déclaration</Text>
+            <Text style={styles.subtitle}>
+              Entrez votre numéro de référence pour suivre l'avancement
             </Text>
-          </SafeAreaView>
-        </View>
-      </Modal>
-    </SafeAreaView>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                placeholder="LST0000"
+                placeholderTextColor={COLORS.textLight}
+                value={ref}
+                onChangeText={setRef}
+                style={styles.input}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                style={styles.searchIcon}
+                onPress={searchByRef}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={COLORS.primary} />
+                ) : (
+                  <Ionicons name="search" size={24} color={COLORS.primary} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Résultats */}
+          {objectData && (
+            <View style={[styles.card, styles.resultCard]}>
+              <View style={styles.refContainer}>
+                <Text style={styles.refLabel}>Référence:</Text>
+                <Text style={styles.ref}>
+                  {objectData.ref || objectData.id}
+                </Text>
+              </View>
+
+              <View style={styles.detailsContainer}>
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Feather name="box" size={18} color={COLORS.tertiary} />
+                  </View>
+                  <View style={styles.detailTextContainer}>
+                    <Text style={styles.detailLabel}>Type d'objet</Text>
+                    <Text style={styles.detailValue}>{objectData.type}</Text>
+                  </View>
+                </View>
+
+                {objectData.description && (
+                  <View style={styles.detailRow}>
+                    <View style={styles.detailIcon}>
+                      <Feather
+                        name="file-text"
+                        size={18}
+                        color={COLORS.tertiary}
+                      />
+                    </View>
+                    <View style={styles.detailTextContainer}>
+                      <Text style={styles.detailLabel}>Description</Text>
+                      <Text style={styles.detailValue}>
+                        {objectData.additionalDetails}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Feather name="map-pin" size={18} color={COLORS.tertiary} />
+                  </View>
+                  <View style={styles.detailTextContainer}>
+                    <Text style={styles.detailLabel}>Lieu</Text>
+                    <Text style={styles.detailValue}>
+                      {objectData.location}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailRow}>
+                  <View style={styles.detailIcon}>
+                    <Feather
+                      name="calendar"
+                      size={18}
+                      color={COLORS.tertiary}
+                    />
+                  </View>
+                  <View style={styles.detailTextContainer}>
+                    <Text style={styles.detailLabel}>Date</Text>
+                    <Text style={styles.detailValue}>
+                      {new Date(
+                        objectData.createdAt?.seconds * 1000
+                      ).toLocaleDateString("fr-FR", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.statusWrapper}>{renderStatusBlock()}</View>
+            </View>
+          )}
+        </ScrollView>
+      </TouchableWithoutFeedback>
+    </KeyboardAvoidingView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
+    padding: 20,
+    backgroundColor: COLORS.neutral100,
+    flexGrow: 1,
   },
   header: {
-    padding: 16,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  logo: {
+    width: 120,
+    height: 60,
+    marginBottom: 12,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "600",
-    color: "#333",
+    color: COLORS.primary,
+    textAlign: "center",
   },
-  content: {
-    flex: 1,
-    padding: 16,
+  headerSubtitle: {
+    fontSize: 16,
+    color: COLORS.textDefault,
+    marginTop: 4,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.neutral0,
     borderRadius: 12,
     padding: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
+    marginBottom: 20,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 16,
+  resultCard: {
+    borderTopWidth: 4,
+    borderTopColor: COLORS.primary,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.textDark,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.textLight,
+    marginBottom: 20,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.borderDefault,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.neutral0,
   },
   input: {
     flex: 1,
-    height: 50,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    height: 48,
+    color: COLORS.textDark,
     fontSize: 16,
-    color: "#333",
-    marginRight: 12,
   },
-  searchButton: {
-    height: 50,
-    width: 50,
-    backgroundColor: "#5352ed",
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#5352ed",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  errorText: {
-    color: "#e74c3c",
-    fontSize: 14,
-    marginBottom: 12,
-  },
-  divider: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginVertical: 24,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#eee",
-  },
-  orText: {
-    paddingHorizontal: 16,
-    color: "#999",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  qrButton: {
-    height: 50,
-    backgroundColor: "#5352ed",
-    borderRadius: 8,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#5352ed",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  qrIcon: {
-    marginRight: 10,
-  },
-  qrButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: "#000",
-  },
-  scannerContainer: {
-    flex: 1,
-  },
-  scannerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-  },
-  closeButton: {
+  searchIcon: {
     padding: 8,
   },
-  scannerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#fff",
-    marginLeft: 16,
+  refContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderDefault,
   },
-  scanner: {
+  refLabel: {
+    fontWeight: "500",
+    color: COLORS.textDefault,
+    fontSize: 16,
+    marginRight: 8,
+  },
+  ref: {
+    fontWeight: "600",
+    color: COLORS.primary,
+    fontSize: 16,
+  },
+  detailsContainer: {
+    marginVertical: 8,
+  },
+  detailRow: {
+    flexDirection: "row",
+    marginVertical: 12,
+  },
+  detailIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.backgroundAccent2,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  detailTextContainer: {
     flex: 1,
   },
-  scannerFrame: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
+  detailLabel: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginBottom: 2,
   },
-  scannerTargetCorner1: {
-    position: "absolute",
-    top: "35%",
-    left: "25%",
-    width: 30,
-    height: 30,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
-    borderColor: "#5352ed",
-  },
-  scannerTargetCorner2: {
-    position: "absolute",
-    top: "35%",
-    right: "25%",
-    width: 30,
-    height: 30,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
-    borderColor: "#5352ed",
-  },
-  scannerTargetCorner3: {
-    position: "absolute",
-    bottom: "35%",
-    left: "25%",
-    width: 30,
-    height: 30,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
-    borderColor: "#5352ed",
-  },
-  scannerTargetCorner4: {
-    position: "absolute",
-    bottom: "35%",
-    right: "25%",
-    width: 30,
-    height: 30,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
-    borderColor: "#5352ed",
-  },
-  scanInstruction: {
-    color: "#fff",
-    fontSize: 16,
+  detailValue: {
+    fontSize: 14,
+    color: COLORS.textDark,
     fontWeight: "500",
-    textAlign: "center",
-    padding: 24,
+  },
+  statusWrapper: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderDefault,
+  },
+  statusContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  statusIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  statusTextContainer: {
+    flex: 1,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.textDark,
+    marginBottom: 4,
+  },
+  statusDescription: {
+    fontSize: 14,
+    color: COLORS.textDefault,
+    lineHeight: 20,
+  },
+  contactBox: {
+    backgroundColor: COLORS.backgroundAccent2,
+    padding: 16,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.tertiary,
+    marginTop: 12,
+  },
+  contactTitle: {
+    fontWeight: "600",
+    color: COLORS.primary,
+    marginBottom: 8,
+    fontSize: 15,
+  },
+  contactText: {
+    fontSize: 14,
+    color: COLORS.textDefault,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  detailsButton: {
+    backgroundColor: COLORS.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  detailsButtonText: {
+    color: COLORS.textInverse,
+    fontWeight: "600",
+    fontSize: 15,
+    marginRight: 8,
   },
 });
-
-export default SearchReportScreen;

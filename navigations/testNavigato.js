@@ -10,25 +10,79 @@ import RegisterScreen from "../screens/auth/registerScreen";
 import ForgotPasswordScreen from "../screens/auth/forgotPasswordScreen";
 import ResetPasswordScreen from "../screens/auth/resetPasswordScreen";
 import ReportLostScreen from "../screens/reportLost/reportLostScreen";
-//import SearchReportScreen from "../screens/searchReportScreen";
+import ClaimLookupScreen from "../screens/searchReportScreen";
 import ProfileTabs from "./ProfileTabs";
+import ObjectDetailsScreen from "../screens/Profile/objectDetailsScreen";
+import AuthLoadingScreen from "../screens/AuthLoadingScreen";
 const Stack = createStackNavigator();
 const AuthNavigator = () => {
   return (
-    <Stack.Navigator
-      initialRouteName="Home"
-      screenOptions={{ headerShown: false }}
-    >
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Register" component={RegisterScreen} />
-      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-      <Stack.Screen name="QRCode" component={QRCodeScreen} />
-      <Stack.Screen name="Reportfound" component={ReportFoundScreen} />
-      <Stack.Screen name="FoundChoice" component={FoundChoiceScreen} />
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="ReportLost" component={ReportLostScreen} />
-      <Stack.Screen name="Profile" component={ProfileTabs} />
+    <Stack.Navigator initialRouteName="AuthLoading">
+      <Stack.Screen
+        name="AuthLoading"
+        component={AuthLoadingScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Login"
+        component={LoginScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Register"
+        component={RegisterScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ForgotPassword"
+        component={ForgotPasswordScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ResetPassword"
+        component={ResetPasswordScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="QRCode"
+        component={QRCodeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Reportfound"
+        component={ReportFoundScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="FoundChoice"
+        component={FoundChoiceScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ReportLost"
+        component={ReportLostScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="profileTabs"
+        component={ProfileTabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ObjectDetails"
+        component={ObjectDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="SearchDoc"
+        component={ClaimLookupScreen}
+        options={{ headerShown: false }}
+      />
     </Stack.Navigator>
   );
 };

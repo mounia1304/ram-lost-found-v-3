@@ -35,45 +35,20 @@ def save_match(lost_id, found_id, score, user_id=None):
         "lost_id": lost_id,
         "found_id": found_id,
         "score": score,
-        "userId": user_id,
+        "user_Id": user_id,
         "status": "waiting",
         "timestamp": datetime.utcnow()
     }
     db.collection("matches").add(match_data)
-
-
-@app.route("/matches/<lost_id>", methods=["GET"])
-def get_matches_for_lost(lost_id):
+ # 🔁 Met à jour les statuts des objets liés
     try:
-        matches_ref = db.collection("matches")
-        query = matches_ref.where("lostId", "==", lost_id).where("score", ">", 0.5)
-        results = query.stream()
-        matches = []
-
-        for doc in results:
-            match = doc.to_dict()
-            match["id"] = doc.id
-            matches.append(match)
-
-        return jsonify({"matches": matches}), 200
+        db.collection("lostObjects").document(lost_id).update({"status": "matched"})
+        db.collection("foundObjects").document(found_id).update({"status": "matched"})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-@app.route("/user_matches", methods=["GET"])
-def get_user_matches():
-    user_id = request.args.get("userId")
-    if not user_id:
-        return jsonify({"error": "Missing userId"}), 400
+        print(f"[⚠️] Erreur lors de la mise à jour des statuts : {e}")
 
-    matches_ref = db.collection("matches").where("userId", "==", user_id)
-    matches = matches_ref.stream()
-    
-    results = []
-    for match in matches:
-        data = match.to_dict()
-        data["id"] = match.id
-        results.append(data)
 
-    return jsonify(results), 200
+
 @app.route("/generate-embedding", methods=["POST"])
 def generate_embedding():
     data = request.json
@@ -105,7 +80,10 @@ def generate_embedding():
         # Recherche des correspondances dans l’autre collection
         opposite_type = "found" if object_type == "lost" else "lost"
         opposite_collection = get_collection_name(opposite_type)
-        candidates = db.collection(opposite_collection).stream()
+        # Filtre par status
+        status_filter = "found" if object_type == "lost" else "lost"
+        candidates = db.collection(opposite_collection).where("status", "==", status_filter).stream()
+
 
         for doc in candidates:
             candidate = doc.to_dict()
@@ -159,7 +137,8 @@ def process_pending_objects():
                 # Cherche des correspondances
                 opposite_type = "found" if object_type == "lost" else "lost"
                 opposite_collection = get_collection_name(opposite_type)
-                candidates = db.collection(opposite_collection).stream()
+                status_filter = "found" if object_type == "lost" else "lost"
+                candidates = db.collection(opposite_collection).where("status", "==", status_filter).stream()
 
                 for candidate_doc in candidates:
                     candidate = candidate_doc.to_dict()
@@ -186,6 +165,11 @@ def process_pending_objects():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -15,7 +15,8 @@ import {
   ActivityIndicator,
   Modal,
 } from "react-native";
-import PhoneInput from "react-native-phone-number-input";
+// Remplacer l'import PhoneInput par notre composant
+import PhoneInput from "../../components/PhoneNumberInput";
 import * as ImagePicker from "expo-image-picker";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -139,11 +140,32 @@ function ReportFoundScreen() {
     acceptTerms: false,
   });
 
+  // NOUVEAUX ÉTATS pour le téléphone
+  const [phoneData, setPhoneData] = useState(null);
+  const [phoneError, setPhoneError] = useState("");
+
   const [currentStep, setCurrentStep] = useState(1);
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const phoneInput = useRef(null);
   const scrollViewRef = useRef();
+
+  // NOUVELLE FONCTION pour gérer le changement de téléphone
+  const handlePhoneChange = (phoneDataReceived) => {
+    setPhoneData(phoneDataReceived);
+
+    // Mettre à jour formData.telephone avec le numéro complet formaté
+    setFormData((prev) => ({
+      ...prev,
+      telephone: phoneDataReceived.fullNumber || phoneDataReceived.raw || "",
+    }));
+
+    // Gérer les erreurs de validation
+    if (phoneDataReceived.raw && !phoneDataReceived.isValid) {
+      setPhoneError("Numéro de téléphone invalide");
+    } else {
+      setPhoneError("");
+    }
+  };
 
   // Gestion des changements de formulaire
   const handleChange = (name, value) => {
@@ -177,9 +199,9 @@ function ReportFoundScreen() {
     });
     setImage(null);
     setCurrentStep(1);
-    if (phoneInput.current) {
-      phoneInput.current.setState({ number: "" });
-    }
+    // Réinitialiser les données de téléphone
+    setPhoneData(null);
+    setPhoneError("");
   };
 
   // Sélection d'une image
@@ -196,7 +218,7 @@ function ReportFoundScreen() {
     }
   };
 
-  // Validation spécifique par étape avec alertes détaillées
+  // VALIDATION MISE À JOUR pour le téléphone
   const validateStep = (step) => {
     if (step === 1) {
       // Validation type d'objet
@@ -284,20 +306,14 @@ function ReportFoundScreen() {
         return false;
       }
 
-      // Validation téléphone
-      const phoneNumber =
-        phoneInput.current?.getNumberAfterPossiblyEliminatingZero()
-          ?.formattedNumber;
-      if (!phoneNumber) {
+      // NOUVELLE VALIDATION pour le téléphone
+      if (!phoneData || !phoneData.isValid) {
         Alert.alert(
           "Téléphone requis",
-          "Votre numéro de téléphone est nécessaire pour un contact rapide en cas de besoin."
+          "Votre numéro de téléphone valide est nécessaire pour un contact rapide en cas de besoin."
         );
         return false;
       }
-
-      // Mettre à jour la valeur du téléphone
-      handleChange("telephone", phoneNumber);
     }
 
     if (step === 4) {
@@ -350,6 +366,7 @@ function ReportFoundScreen() {
     try {
       const imageToUpload = image;
 
+      // Préparer les données avec les nouvelles informations de téléphone
       const form = {
         typeObjet: formData.typeObjet,
         description: formData.description,
@@ -358,6 +375,10 @@ function ReportFoundScreen() {
         numVol: formData.numVol,
         email: formData.email,
         telephone: formData.telephone,
+        // Inclure les données complètes du téléphone
+        phoneCountry: phoneData?.countryCode || "",
+        phoneFormatted: phoneData?.formatted || "",
+        phoneCallingCode: phoneData?.callingCode || "",
       };
 
       const { docId, shortCode } = await saveFoundObjectReport(
@@ -498,23 +519,21 @@ function ReportFoundScreen() {
               autoCapitalize="none"
             />
 
-            <Text style={styles.fieldLabel}>Téléphone *</Text>
-            <View style={styles.phoneContainer}>
+            {/* REMPLACEMENT du PhoneInput par WebCompatiblePhoneInput */}
+            <View style={styles.phoneFieldContainer}>
               <PhoneInput
-                ref={phoneInput}
-                defaultValue={formData.telephone || ""}
-                defaultCode="MA"
-                layout="first"
-                onChangeFormattedText={(text) =>
-                  handleChange("telephone", text)
-                }
-                containerStyle={styles.phoneInputContainer}
-                textContainerStyle={styles.phoneTextContainer}
-                textInputStyle={styles.phoneTextInput}
-                codeTextStyle={styles.phoneCodeText}
-                flagButtonStyle={styles.phoneFlagButton}
+                label="Téléphone *"
+                defaultCountry="MA"
+                onPhoneChange={handlePhoneChange}
+                placeholder="Entrez votre numéro"
+                preferredCountries={["MA", "FR", "ES", "DZ", "TN"]}
+                excludeCountries={["AF", "KP", "IR", "SY", "IQ"]}
               />
+              {phoneError && (
+                <Text style={styles.phoneErrorText}>{phoneError}</Text>
+              )}
             </View>
+
             <Text style={styles.helperText}>
               Vos coordonnées sont utilisées uniquement pour vous contacter si
               nécessaire
@@ -606,7 +625,9 @@ function ReportFoundScreen() {
               <View style={styles.summaryItem}>
                 <Text style={styles.summaryLabel}>Téléphone:</Text>
                 <Text style={styles.summaryValue}>
-                  {formData.telephone || "Non renseigné"}
+                  {phoneData?.formatted ||
+                    formData.telephone ||
+                    "Non renseigné"}
                 </Text>
               </View>
             </View>
@@ -849,6 +870,16 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontStyle: "italic",
   },
+  // NOUVEAUX STYLES pour le champ téléphone
+  phoneFieldContainer: {
+    marginTop: 16,
+  },
+  phoneErrorText: {
+    fontSize: 12,
+    color: COLORS.error,
+    marginTop: 5,
+    marginLeft: 5,
+  },
   selectorButton: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -926,33 +957,6 @@ const styles = StyleSheet.create({
   selectedOptionText: {
     fontWeight: "600",
     color: COLORS.primary,
-  },
-  phoneContainer: {
-    marginBottom: 8,
-  },
-  phoneInputContainer: {
-    backgroundColor: "#f9f9f9",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingVertical: 0,
-    height: 50,
-  },
-  phoneTextContainer: {
-    backgroundColor: "transparent",
-    paddingVertical: 0,
-  },
-  phoneTextInput: {
-    fontSize: 16,
-    color: COLORS.text,
-    paddingVertical: 0,
-  },
-  phoneCodeText: {
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  phoneFlagButton: {
-    paddingHorizontal: 8,
   },
   imagePickerContainer: {
     marginTop: 16,

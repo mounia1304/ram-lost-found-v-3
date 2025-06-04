@@ -149,17 +149,6 @@ const LoginScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.logoContainer}>
-            <Image
-              source={{
-                uri: "https://www.royalairmaroc.com/content/dam/royal-air-maroc/Static/logo_ram_arabic-english.png",
-              }}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.welcomeText}>RAM Lost & Found</Text>
-          </View>
-
           <Text style={styles.title}>Connexion</Text>
 
           <View style={styles.formContainer}>
@@ -270,6 +259,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    marginTop: 100,
   },
   scrollContent: {
     flexGrow: 1,
@@ -302,6 +292,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.text,
     marginBottom: 20,
+    textAlign: "center",
   },
   formContainer: {
     backgroundColor: COLORS.light,
