@@ -23,7 +23,7 @@ import { auth } from "../../services/databaseService/firebaseConfig";
 
 // Import des constantes
 import { objectTypes } from "../../constants/objecttypes";
-
+import ColorPicker from "../../components/ColorPicker";
 // Couleurs (reprises de votre thème RAM)
 const COLORS = {
   primary: "#c2002f",
@@ -42,16 +42,18 @@ const COLORS = {
 
 // Couleurs disponibles pour multi-sélection
 const AVAILABLE_COLORS = [
-  { name: "Noir", value: "noir" },
-  { name: "Blanc", value: "blanc" },
-  { name: "Gris", value: "gris" },
-  { name: "Bleu", value: "bleu" },
-  { name: "Rouge", value: "rouge" },
-  { name: "Vert", value: "vert" },
-  { name: "Jaune", value: "jaune" },
-  { name: "Marron", value: "marron" },
-  { name: "Beige", value: "beige" },
-  { name: "Multi-couleur", value: "multicolore" },
+  { name: "Rouge", hex: "#FF0000", value: "red" },
+  { name: "Bleu", hex: "#2872e4", value: "blue" },
+  { name: "Vert", hex: "#17d345", value: "green" },
+  { name: "Jaune", hex: "#FFFF00", value: "yellow" },
+  { name: "Noir", hex: "#000000", value: "black" },
+  { name: "Blanc", hex: "#FFFFFF", value: "white", textColor: "#000" },
+  { name: "Gris", hex: "#808080", value: "gray" },
+  { name: "Rose", hex: "#ee5fa0", value: "pink" },
+  { name: "Orange", hex: "#f3b42f", value: "orange" },
+  { name: "Violet", hex: "#800080", value: "purple" },
+  { name: "Marron", hex: "#782416", value: "brown" },
+  { name: "Turquoise", hex: "#40E0D0", value: "turquoise" },
 ];
 
 const CustomSelector = ({ label, options, selectedValue, onSelect }) => {
@@ -262,7 +264,6 @@ const ReportLostScreen = ({ navigation }) => {
 
   // Fonctions gestion formulaire avec vérifications de sécurité
   const updateFormField = (field, value) => {
-    console.log(`Updating ${field} with:`, value); // Log de débogage
     if (typeof field === "string" && field.length > 0) {
       setFormData((prev) => ({
         ...prev,
@@ -401,7 +402,12 @@ const ReportLostScreen = ({ navigation }) => {
       navigation.goBack();
     }
   };
-
+  const handleColorSelection = (selectedColors) => {
+    setFormData((prev) => ({
+      ...prev,
+      color: selectedColors,
+    }));
+  };
   // Fonction pour soumettre le formulaire
   const handleSubmit = async () => {
     try {
@@ -438,7 +444,7 @@ const ReportLostScreen = ({ navigation }) => {
             text: "OK",
             onPress: () => {
               // Retourner à l'écran d'accueil
-              navigation.navigate("Profile");
+              navigation.navigate("profileTabs");
             },
           },
         ]
@@ -586,31 +592,16 @@ const ReportLostScreen = ({ navigation }) => {
             )}
 
             <Text style={styles.fieldLabel}>Couleur(s) *</Text>
-            <View style={styles.colorContainer}>
-              {AVAILABLE_COLORS.map((color, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.colorButton,
-                    Array.isArray(formData.color) &&
-                      formData.color.includes(color.value) &&
-                      styles.colorButtonSelected,
-                  ]}
-                  onPress={() => toggleColor(color.value)}
-                >
-                  <Text
-                    style={[
-                      styles.colorButtonText,
-                      Array.isArray(formData.color) &&
-                        formData.color.includes(color.value) &&
-                        styles.colorButtonTextSelected,
-                    ]}
-                  >
-                    {color.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            <ColorPicker
+              selectedColors={formData.color}
+              onColorSelect={handleColorSelection}
+              colorPalette={AVAILABLE_COLORS}
+              title="Sélectionnez une ou plusieurs couleurs"
+              selectedTitle="Couleurs sélectionnées:"
+              maxSelectable={5}
+              style={styles.colorPickerContainer}
+              titleStyle={styles.colorPickerTitle}
+            />
 
             <Text style={styles.fieldLabel}>Informations supplémentaires</Text>
             <TextInput
@@ -1221,6 +1212,21 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     backgroundColor: COLORS.secondary,
+  },
+  colorPickerContainer: {
+    marginTop: 8,
+    marginBottom: 16,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  colorPickerTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.text,
+    marginBottom: 12,
   },
 });
 

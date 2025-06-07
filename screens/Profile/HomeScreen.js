@@ -236,60 +236,11 @@ const HomeScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions rapides</Text>
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={styles.actionTile}
-              onPress={() => navigation.navigate("Notifications")}
-            >
-              <LinearGradient
-                colors={["#FF6B35", "#F7931E"]}
-                style={styles.actionGradient}
-              >
-                <Ionicons name="notifications" size={24} color="white" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Notifications</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionTile}>
-              <LinearGradient
-                colors={["#667eea", "#764ba2"]}
-                style={styles.actionGradient}
-              >
-                <Ionicons name="search" size={24} color="white" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Rechercher</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionTile}>
-              <LinearGradient
-                colors={["#f093fb", "#f5576c"]}
-                style={styles.actionGradient}
-              >
-                <Ionicons name="analytics" size={24} color="white" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Statistiques</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionTile}>
-              <LinearGradient
-                colors={["#4facfe", "#00f2fe"]}
-                style={styles.actionGradient}
-              >
-                <Ionicons name="help-circle" size={24} color="white" />
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Support</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* Tips Card */}
         <View style={styles.tipsCard}>
           <View style={styles.tipsHeader}>
             <Ionicons name="bulb" size={20} color="#F59E0B" />
-            <Text style={styles.tipsTitle}>Conseil du jour</Text>
+            <Text style={styles.tipsTitle}>Conseil </Text>
           </View>
           <Text style={styles.tipsText}>
             Ajoutez des photos et une description détaillée pour augmenter vos

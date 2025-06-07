@@ -95,7 +95,7 @@ Description: ${data.description}.
         `.trim();
 
         const response = await fetch(
-          "http://10.0.2.2:5000/generate-embedding",
+          "https://d1fa-41-92-20-80.ngrok-free.app/generate-embedding",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
