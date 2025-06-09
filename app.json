@@ -2,10 +2,34 @@
   "expo": {
     "name": "RAM Lost & Found",
     "slug": "ram-lost-found-js",
-    "version": "1.0.0",
     "scheme": "ramlostfound",
+    "version": "1.0.0",
     "icon": "./assets/icon.png",
-    "plugins": []
-    
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#C20831"
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+     [
+        "onesignal-expo-plugin",
+        {
+          "mode": "development"
+        }
+      ]
+    ],
+    "android": {
+      "package": "com.mounia_13.ramlostfoundjs"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9fa7460c-f342-4283-b1ee-e4ecfaf6ce01"
+      },
+      "oneSignalAppId": "1ee0d38e-d5b7-4cae-9c90-b51ea025aaec"
+    }
   }
 }

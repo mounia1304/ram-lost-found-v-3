@@ -10,10 +10,23 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
+  Animated,
+  StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { auth, firestore } from "../../services/databaseService/firebaseConfig";
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  setDoc,
+  onSnapshot,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import * as ImagePicker from "expo-image-picker";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
@@ -25,80 +38,206 @@ export default function ProfileScreen({ navigation }) {
     email: "",
     phone: "",
     photoURL: null,
+    PNR: null,
+    documentId: null,
   });
   const [isEditing, setIsEditing] = useState(false);
   const [tempUserInfo, setTempUserInfo] = useState({ ...userInfo });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
-  // Couleurs RAM
+  // Charte graphique RAM
   const COLORS = {
     primary: "#C20831",
-    secondary: "#61374E",
-    background: "#FAFAFA",
-    text: "#333231",
-    textLight: "#7B7A78",
-    border: "#EBEAE8",
-    success: "#00875D",
-    danger: "#A90044",
+    secondary: "#A22032",
+    tertiary: "#B49360",
+    neutral0: "#FFFFFF",
+    neutral100: "#FAFAFA",
+    neutral200: "#EBEAE8",
+    neutral500: "#C2C1BE",
+    neutral700: "#7B7A78",
+    neutral900: "#333231",
+    textDefault: "#595855",
+    textInverse: "#FFFFFF",
+    textLight: "#999999",
+    textDark: "#1A1717",
+    backgroundDefault: "#FFFFFF",
+    backgroundAlternative: "#F7F7F7",
+    backgroundAccent1: "#F0DDDD",
+    backgroundAccent2: "#F6F2ED",
+    backgroundPrimaryOpacity: "rgba(194, 8, 49, .8)",
+    backgroundSecondaryOpacity: "rgba(97, 55, 78, .8)",
+    borderDefault: "#D8D7D4",
+    borderInverse: "#FFFFFF",
+    borderDark: "#929292",
+    iconDefault: "#C20831",
+    iconInverse: "#FFFFFF",
+    shadowDefault: "rgba(0, 0, 0, .1)",
+    ramAccentPrimary: "#CCD7E3",
+    ramAccentPrimaryDark: "#5C7693",
+    ramAccentPrimaryLight: "#E3E9F0",
+    semanticPositive: "#00875D",
+    semanticNegative: "#A90044",
+    semanticCaution: "#B7501F",
+    semanticCautionDark: "#843009",
+    semanticInformative: "#2790F1",
+    backgroundSemanticPositive: "#DBF0EB",
+    backgroundSemanticNegative: "#F2D9E3",
+    backgroundSemanticCaution: "#FEF0E3",
+    backgroundSemanticInformative: "#DFEEFD",
   };
 
   useEffect(() => {
     fetchUserData();
+
+    // Animation d'apparition
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 800,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const fetchUserData = async () => {
     try {
       const currentUser = auth.currentUser;
+      console.log("Current user email:", currentUser?.email);
+
       if (!currentUser) {
+        console.log("No current user, navigating to login");
         navigation.navigate("Login");
         return;
       }
 
-      const userDocRef = doc(firestore, "ownersData", currentUser.uid);
-      const userDoc = await getDoc(userDocRef);
+      // Chercher le document par email dans la collection ownersData
+      const ownersQuery = query(
+        collection(firestore, "ownersData"),
+        where("email", "==", currentUser.email)
+      );
 
-      if (userDoc.exists()) {
+      const querySnapshot = await getDocs(ownersQuery);
+      console.log("Query result size:", querySnapshot.size);
+
+      if (!querySnapshot.empty) {
+        // Document trouvé avec email
+        const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
-        setUserInfo({
+        const documentId = userDoc.id; // C'est le PNR ou autre identifiant
+
+        console.log("Found user data with document ID:", documentId, userData);
+
+        const userProfile = {
           firstName: userData.firstName || "",
           lastName: userData.lastName || "",
           email: userData.email || currentUser.email || "",
           phone: userData.phone || "",
           photoURL: userData.photoURL || null,
-        });
-        setTempUserInfo({
-          firstName: userData.firstName || "",
-          lastName: userData.lastName || "",
-          email: userData.email || currentUser.email || "",
-          phone: userData.phone || "",
-          photoURL: userData.photoURL || null,
-        });
-      } else {
-        // Si le document n'existe pas, on le crée avec les infos de base
-        const newUserInfo = {
-          firstName: currentUser.displayName?.split(" ")[0] || "",
-          lastName:
-            currentUser.displayName?.split(" ").slice(1).join(" ") || "",
-          email: currentUser.email || "",
-          phone: "",
-          photoURL: currentUser.photoURL || null,
-          createdAt: new Date().toISOString(),
+          PNR: userData.PNR || documentId,
+          documentId: documentId,
         };
 
-        await setDoc(userDocRef, newUserInfo);
+        console.log("Processed user profile:", userProfile);
+        setUserInfo(userProfile);
+        setTempUserInfo(userProfile);
+      } else {
+        console.log(
+          "No user document found with email, checking direct email as doc ID"
+        );
 
-        setUserInfo(newUserInfo);
-        setTempUserInfo(newUserInfo);
+        // Fallback: essayer avec l'email comme ID de document (en cas de structure différente)
+        const cleanEmail = currentUser.email.replace(/[^a-zA-Z0-9]/g, "_");
+        const userDocRef = doc(firestore, "ownersData", cleanEmail);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          console.log("Found user data with email as doc ID:", userData);
+
+          const userProfile = {
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            email: userData.email || currentUser.email || "",
+            phone: userData.phone || "",
+            photoURL: userData.photoURL || null,
+            documentId: cleanEmail,
+          };
+
+          setUserInfo(userProfile);
+          setTempUserInfo(userProfile);
+        } else {
+          console.log("No user document found anywhere, creating new one");
+          // Créer un nouveau document avec un ID unique
+          const newUserInfo = {
+            firstName: currentUser.displayName?.split(" ")[0] || "",
+            lastName:
+              currentUser.displayName?.split(" ").slice(1).join(" ") || "",
+            email: currentUser.email || "",
+            phone: "",
+            photoURL: currentUser.photoURL || null,
+            userId: currentUser.uid,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          // Utiliser l'email nettoyé comme ID ou générer un PNR
+          const docId = cleanEmail || `PNR_${Date.now()}`;
+          const userDocRef = doc(firestore, "ownersData", docId);
+          await setDoc(userDocRef, newUserInfo);
+          console.log("Created new user document with ID:", docId, newUserInfo);
+
+          setUserInfo({ ...newUserInfo, documentId: docId });
+          setTempUserInfo({ ...newUserInfo, documentId: docId });
+        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
-      Alert.alert("Erreur", "Impossible de charger le profil");
+      Alert.alert(
+        "Erreur",
+        "Impossible de charger le profil: " + error.message
+      );
     } finally {
       setLoading(false);
     }
   };
+
+  // Écouter les changements en temps réel
+  useEffect(() => {
+    if (!auth.currentUser || !userInfo.documentId) return;
+
+    let unsubscribe;
+
+    if (userInfo.documentId) {
+      const userDocRef = doc(firestore, "ownersData", userInfo.documentId);
+      unsubscribe = onSnapshot(
+        userDocRef,
+        (doc) => {
+          if (doc.exists()) {
+            const userData = doc.data();
+            const userProfile = {
+              firstName: userData.firstName || "",
+              lastName: userData.lastName || "",
+              email: userData.email || auth.currentUser.email || "",
+              phone: userData.phone || "",
+              photoURL: userData.photoURL || null,
+              PNR: userData.PNR || userInfo.PNR,
+              documentId: userInfo.documentId,
+            };
+            setUserInfo(userProfile);
+            if (!isEditing) {
+              setTempUserInfo(userProfile);
+            }
+          }
+        },
+        (error) => {
+          console.error("Error listening to user data:", error);
+        }
+      );
+    }
+
+    return () => unsubscribe && unsubscribe();
+  }, [isEditing, userInfo.documentId]);
 
   const handlePickImage = async () => {
     try {
@@ -134,7 +273,7 @@ export default function ProfileScreen({ navigation }) {
       }
     } catch (error) {
       console.error("Error picking image:", error);
-      Alert.alert("Erreur", "Impossible de changer la photo");
+      Alert.alert("Erreur", "Impossible de changer la photo: " + error.message);
     } finally {
       setUploadingImage(false);
     }
@@ -155,22 +294,32 @@ export default function ProfileScreen({ navigation }) {
         return;
       }
 
-      const userDocRef = doc(firestore, "ownersData", currentUser.uid);
+      const documentId = userInfo.documentId;
+      const userDocRef = doc(firestore, "ownersData", documentId);
 
-      await updateDoc(userDocRef, {
+      const updateData = {
         firstName: tempUserInfo.firstName.trim(),
         lastName: tempUserInfo.lastName.trim(),
         phone: tempUserInfo.phone.trim(),
         photoURL: tempUserInfo.photoURL,
-        updatedAt: new Date().toISOString(),
-      });
+        email: currentUser.email,
+        userId: currentUser.uid,
+        updatedAt: new Date(),
+      };
 
-      setUserInfo(tempUserInfo);
+      if (userInfo.PNR) {
+        updateData.PNR = userInfo.PNR;
+      }
+
+      console.log("Updating user data in document:", documentId, updateData);
+      await updateDoc(userDocRef, updateData);
+
+      setUserInfo({ ...tempUserInfo, documentId, PNR: userInfo.PNR });
       setIsEditing(false);
-      Alert.alert("Succès", "Profil mis à jour");
+      Alert.alert("Succès", "Profil mis à jour avec succès");
     } catch (error) {
       console.error("Error saving profile:", error);
-      Alert.alert("Erreur", "Échec de la mise à jour");
+      Alert.alert("Erreur", "Échec de la mise à jour: " + error.message);
     } finally {
       setSaving(false);
     }
@@ -181,11 +330,13 @@ export default function ProfileScreen({ navigation }) {
       { text: "Annuler", style: "cancel" },
       {
         text: "Déconnexion",
+        style: "destructive",
         onPress: async () => {
           try {
             await signOut(auth);
             navigation.replace("Home");
           } catch (error) {
+            console.error("Logout error:", error);
             Alert.alert("Erreur", "Échec de la déconnexion");
           }
         },
@@ -196,167 +347,297 @@ export default function ProfileScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <View style={styles.loadingContent}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Chargement du profil...</Text>
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Header du profil */}
-        <View style={styles.profileHeader}>
-          <TouchableOpacity
-            onPress={isEditing ? handlePickImage : null}
-            disabled={uploadingImage}
-          >
-            {uploadingImage ? (
-              <View style={styles.avatarLoading}>
-                <ActivityIndicator size="small" color="white" />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header avec gradient RAM */}
+        <LinearGradient
+          colors={[COLORS.primary, COLORS.secondary]}
+          style={styles.headerGradient}
+        >
+          <Animated.View style={[styles.profileHeader, { opacity: fadeAnim }]}>
+            <TouchableOpacity
+              onPress={isEditing ? handlePickImage : null}
+              disabled={uploadingImage}
+              style={styles.avatarContainer}
+              activeOpacity={isEditing ? 0.8 : 1}
+            >
+              {uploadingImage ? (
+                <View style={styles.avatarLoading}>
+                  <ActivityIndicator size="small" color={COLORS.textInverse} />
+                </View>
+              ) : tempUserInfo.photoURL || userInfo.photoURL ? (
+                <Image
+                  source={{
+                    uri: isEditing ? tempUserInfo.photoURL : userInfo.photoURL,
+                  }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Ionicons
+                    name="person"
+                    size={40}
+                    color={COLORS.textInverse}
+                  />
+                </View>
+              )}
+              {isEditing && (
+                <View style={styles.editBadge}>
+                  <Ionicons
+                    name="camera"
+                    size={14}
+                    color={COLORS.textInverse}
+                  />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.userName}>
+              {isEditing
+                ? `${tempUserInfo.firstName} ${tempUserInfo.lastName}`.trim() ||
+                  "Nom d'utilisateur"
+                : `${userInfo.firstName} ${userInfo.lastName}`.trim() ||
+                  "Nom d'utilisateur"}
+            </Text>
+            <Text style={styles.userEmail}>{userInfo.email}</Text>
+          </Animated.View>
+        </LinearGradient>
+
+        {/* Section d'informations */}
+        <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons
+                name="person-outline"
+                size={20}
+                color={COLORS.iconDefault}
+              />
+              <Text style={styles.sectionTitle}>Informations personnelles</Text>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Prénom</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.input}
+                  value={tempUserInfo.firstName}
+                  onChangeText={(text) =>
+                    setTempUserInfo({ ...tempUserInfo, firstName: text })
+                  }
+                  placeholder="Votre prénom"
+                  placeholderTextColor={COLORS.textLight}
+                />
+              ) : (
+                <View style={styles.inputDisplay}>
+                  <Text style={styles.inputValue}>
+                    {userInfo.firstName || "Non renseigné"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nom</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.input}
+                  value={tempUserInfo.lastName}
+                  onChangeText={(text) =>
+                    setTempUserInfo({ ...tempUserInfo, lastName: text })
+                  }
+                  placeholder="Votre nom"
+                  placeholderTextColor={COLORS.textLight}
+                />
+              ) : (
+                <View style={styles.inputDisplay}>
+                  <Text style={styles.inputValue}>
+                    {userInfo.lastName || "Non renseigné"}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email</Text>
+              <View style={[styles.inputDisplay, styles.disabledInput]}>
+                <Text style={[styles.inputValue, { color: COLORS.textLight }]}>
+                  {userInfo.email}
+                </Text>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={16}
+                  color={COLORS.textLight}
+                />
               </View>
-            ) : tempUserInfo.photoURL || userInfo.photoURL ? (
-              <Image
-                source={{
-                  uri: isEditing ? tempUserInfo.photoURL : userInfo.photoURL,
-                }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Ionicons name="person" size={40} color="white" />
-              </View>
-            )}
-            {isEditing && (
-              <View style={styles.editBadge}>
-                <Ionicons name="camera" size={16} color="white" />
-              </View>
-            )}
-          </TouchableOpacity>
+            </View>
 
-          <Text style={styles.userName}>
-            {isEditing
-              ? `${tempUserInfo.firstName} ${tempUserInfo.lastName}`
-              : `${userInfo.firstName} ${userInfo.lastName}`}
-          </Text>
-          <Text style={styles.userEmail}>{userInfo.email}</Text>
-        </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Téléphone</Text>
+              {isEditing ? (
+                <TextInput
+                  style={styles.input}
+                  value={tempUserInfo.phone}
+                  onChangeText={(text) =>
+                    setTempUserInfo({ ...tempUserInfo, phone: text })
+                  }
+                  placeholder="Votre numéro de téléphone"
+                  placeholderTextColor={COLORS.textLight}
+                  keyboardType="phone-pad"
+                />
+              ) : (
+                <View style={styles.inputDisplay}>
+                  <Text style={styles.inputValue}>
+                    {userInfo.phone || "Non renseigné"}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
 
-        {/* Section d'édition */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Informations personnelles</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Prénom</Text>
+          {/* Actions */}
+          <View style={styles.actionsContainer}>
             {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={tempUserInfo.firstName}
-                onChangeText={(text) =>
-                  setTempUserInfo({ ...tempUserInfo, firstName: text })
-                }
-                placeholder="Votre prénom"
-              />
+              <>
+                <TouchableOpacity
+                  style={styles.saveButton}
+                  onPress={handleSaveProfile}
+                  disabled={saving}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={[COLORS.semanticPositive, "#00A368"]}
+                    style={styles.buttonGradient}
+                  >
+                    {saving ? (
+                      <ActivityIndicator
+                        color={COLORS.textInverse}
+                        size="small"
+                      />
+                    ) : (
+                      <>
+                        <Ionicons
+                          name="checkmark"
+                          size={18}
+                          color={COLORS.textInverse}
+                        />
+                        <Text style={styles.buttonText}>Enregistrer</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setTempUserInfo({ ...userInfo });
+                    setIsEditing(false);
+                  }}
+                  disabled={saving}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.cancelButtonText}>Annuler</Text>
+                </TouchableOpacity>
+              </>
             ) : (
-              <Text style={styles.inputValue}>
-                {userInfo.firstName || "Non renseigné"}
-              </Text>
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Nom</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={tempUserInfo.lastName}
-                onChangeText={(text) =>
-                  setTempUserInfo({ ...tempUserInfo, lastName: text })
-                }
-                placeholder="Votre nom"
-              />
-            ) : (
-              <Text style={styles.inputValue}>
-                {userInfo.lastName || "Non renseigné"}
-              </Text>
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Email</Text>
-            <Text style={styles.inputValue}>{userInfo.email}</Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Téléphone</Text>
-            {isEditing ? (
-              <TextInput
-                style={styles.input}
-                value={tempUserInfo.phone}
-                onChangeText={(text) =>
-                  setTempUserInfo({ ...tempUserInfo, phone: text })
-                }
-                placeholder="Votre numéro"
-                keyboardType="phone-pad"
-              />
-            ) : (
-              <Text style={styles.inputValue}>
-                {userInfo.phone || "Non renseigné"}
-              </Text>
-            )}
-          </View>
-        </View>
-
-        {/* Actions */}
-        <View style={styles.actionsContainer}>
-          {isEditing ? (
-            <>
               <TouchableOpacity
-                style={[styles.button, styles.saveButton]}
-                onPress={handleSaveProfile}
-                disabled={saving}
-                activeOpacity={0.7}
-              >
-                {saving ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.buttonText}>Enregistrer</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
+                style={styles.editButton}
                 onPress={() => {
                   setTempUserInfo({ ...userInfo });
-                  setIsEditing(false);
+                  setIsEditing(true);
                 }}
-                disabled={saving}
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.buttonText, { color: COLORS.primary }]}>
-                  Annuler
-                </Text>
+                <LinearGradient
+                  colors={[COLORS.primary, COLORS.secondary]}
+                  style={styles.buttonGradient}
+                >
+                  <Ionicons
+                    name="create-outline"
+                    size={18}
+                    color={COLORS.textInverse}
+                  />
+                  <Text style={styles.buttonText}>Modifier le profil</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            </>
-          ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.editButton]}
-              onPress={() => {
-                setTempUserInfo({ ...userInfo });
-                setIsEditing(true);
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.buttonText}>Modifier le profil</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+            )}
+          </View>
 
-        {/* Déconnexion */}
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color={COLORS.danger} />
-          <Text style={[styles.logoutText, { color: COLORS.danger }]}>
-            Déconnexion
-          </Text>
-        </TouchableOpacity>
+          {/* Menu d'options */}
+          <View style={styles.menuSection}>
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
+              <View
+                style={[
+                  styles.menuIcon,
+                  { backgroundColor: COLORS.backgroundSemanticCaution },
+                ]}
+              >
+                <Ionicons
+                  name="shield-outline"
+                  size={20}
+                  color={COLORS.semanticCaution}
+                />
+              </View>
+              <Text style={styles.menuText}>Confidentialité</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={COLORS.neutral700}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
+              <View
+                style={[
+                  styles.menuIcon,
+                  { backgroundColor: COLORS.ramAccentPrimaryLight },
+                ]}
+              >
+                <Ionicons
+                  name="help-circle-outline"
+                  size={20}
+                  color={COLORS.ramAccentPrimaryDark}
+                />
+              </View>
+              <Text style={styles.menuText}>Aide & Support</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={COLORS.neutral700}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Déconnexion */}
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.8}
+          >
+            <View style={styles.logoutContent}>
+              <Ionicons
+                name="log-out-outline"
+                size={20}
+                color={COLORS.semanticNegative}
+              />
+              <Text style={styles.logoutText}>Se déconnecter</Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -369,35 +650,52 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
+    backgroundColor: "#FAFAFA",
+  },
+  loadingContent: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FAFAFA",
+    paddingHorizontal: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#7B7A78",
+    textAlign: "center",
   },
   scrollContainer: {
     paddingBottom: 30,
   },
+
+  // Header
+  headerGradient: {
+    paddingBottom: 40,
+  },
   profileHeader: {
     alignItems: "center",
-    padding: 20,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EBEAE8",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  avatarContainer: {
+    position: "relative",
+    marginBottom: 20,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: "#FFFFFF",
   },
   avatarPlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: "#C20831",
+    backgroundColor: "rgba(255,255,255,0.2)",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 3,
+    borderWidth: 4,
     borderColor: "#FFFFFF",
   },
   avatarLoading: {
@@ -412,129 +710,258 @@ const styles = StyleSheet.create({
   },
   editBadge: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#61374E",
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    bottom: 5,
+    right: 5,
+    backgroundColor: "#B49360",
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
   userName: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginTop: 10,
-    color: "#333231",
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 4,
+    textAlign: "center",
   },
   userEmail: {
-    fontSize: 16,
-    color: "#7B7A78",
-    marginTop: 5,
+    fontSize: 14,
+    color: "rgba(255,255,255,0.8)",
+    marginBottom: 8,
+  },
+  pnrContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  pnrLabel: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "500",
+  },
+  pnrValue: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  profileStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  statItem: {
+    alignItems: "center",
+  },
+  statNumber: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  statLabel: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    marginHorizontal: 20,
+  },
+
+  // Content
+  content: {
+    marginTop: -20,
+    paddingHorizontal: 20,
   },
   section: {
     backgroundColor: "#FFFFFF",
-    margin: 15,
-    borderRadius: 10,
-    padding: 15,
-    shadowColor: "#000",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "rgba(0, 0, 0, .1)",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 1,
+    shadowRadius: 8,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: "#D8D7D4",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#EBEAE8",
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
     color: "#333231",
-    marginBottom: 15,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#EBEAE8",
+    marginLeft: 12,
   },
   inputGroup: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 14,
+    fontWeight: "600",
     color: "#7B7A78",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#EBEAE8",
+    borderColor: "#D8D7D4",
     borderRadius: 8,
-    padding: 12,
+    padding: 16,
     fontSize: 16,
     color: "#333231",
+    backgroundColor: "#FAFAFA",
+  },
+  inputDisplay: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#F7F7F7",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D8D7D4",
+  },
+  disabledInput: {
+    backgroundColor: "#EBEAE8",
   },
   inputValue: {
     fontSize: 16,
     color: "#333231",
-    paddingVertical: 12,
+    flex: 1,
   },
+
+  // Actions
   actionsContainer: {
-    marginHorizontal: 15,
-  },
-  button: {
-    borderRadius: 8,
-    padding: 15,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 10,
-    minHeight: 50,
+    marginBottom: 20,
   },
   editButton: {
-    backgroundColor: "#C20831",
+    borderRadius: 8,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#C20831",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   saveButton: {
-    backgroundColor: "#00875D",
+    borderRadius: 8,
+    overflow: "hidden",
+    elevation: 3,
+    shadowColor: "#00875D",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    marginBottom: 12,
   },
   cancelButton: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
+    borderRadius: 8,
+    borderWidth: 2,
     borderColor: "#C20831",
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 16,
+    alignItems: "center",
+  },
+  buttonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    gap: 8,
   },
   buttonText: {
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
   },
+  cancelButtonText: {
+    color: "#C20831",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  // Menu
+  menuSection: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 8,
+    marginBottom: 20,
+    shadowColor: "rgba(0, 0, 0, .1)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: "#D8D7D4",
+  },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 15,
-    backgroundColor: "#FFFFFF",
+    padding: 16,
     borderRadius: 8,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    marginVertical: 2,
+  },
+  menuIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
   },
   menuText: {
     fontSize: 16,
     color: "#333231",
-    marginLeft: 10,
     flex: 1,
+    fontWeight: "500",
   },
+
+  // Logout
   logoutButton: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#F2D9E3",
+    elevation: 1,
+    shadowColor: "rgba(169, 0, 68, 0.1)",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+  },
+  logoutContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 15,
-    marginTop: 20,
+    paddingVertical: 16,
+    gap: 8,
   },
   logoutText: {
     fontSize: 16,
     fontWeight: "600",
-    marginLeft: 10,
-  },
-  actionsContainer: {
-    marginHorizontal: 15,
-    zIndex: 1, // Ajouté pour s'assurer que les boutons sont au-dessus
+    color: "#A90044",
   },
 });

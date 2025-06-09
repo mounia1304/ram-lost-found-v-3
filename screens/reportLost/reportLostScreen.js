@@ -42,17 +42,17 @@ const COLORS = {
 
 // Couleurs disponibles pour multi-sélection
 const AVAILABLE_COLORS = [
-  { name: "Rouge", hex: "#FF0000", value: "red" },
-  { name: "Bleu", hex: "#2872e4", value: "blue" },
+  { name: "Rouge", hex: "#FF0000", value: "rouge" },
+  { name: "Bleu", hex: "#2872e4", value: "bleu" },
   { name: "Vert", hex: "#17d345", value: "green" },
-  { name: "Jaune", hex: "#FFFF00", value: "yellow" },
-  { name: "Noir", hex: "#000000", value: "black" },
-  { name: "Blanc", hex: "#FFFFFF", value: "white", textColor: "#000" },
-  { name: "Gris", hex: "#808080", value: "gray" },
-  { name: "Rose", hex: "#ee5fa0", value: "pink" },
+  { name: "Jaune", hex: "#FFFF00", value: "jaune" },
+  { name: "Noir", hex: "#000000", value: "noir" },
+  { name: "Blanc", hex: "#FFFFFF", value: "blanc", textColor: "#000" },
+  { name: "Gris", hex: "#808080", value: "gris" },
+  { name: "Rose", hex: "#ee5fa0", value: "rose" },
   { name: "Orange", hex: "#f3b42f", value: "orange" },
-  { name: "Violet", hex: "#800080", value: "purple" },
-  { name: "Marron", hex: "#782416", value: "brown" },
+  { name: "Violet", hex: "#800080", value: "violet" },
+  { name: "Marron", hex: "#782416", value: "marron" },
   { name: "Turquoise", hex: "#40E0D0", value: "turquoise" },
 ];
 

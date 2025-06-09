@@ -561,6 +561,7 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+
     backgroundColor: COLORS.background,
   },
   header: {
@@ -887,7 +888,6 @@ const styles = StyleSheet.create({
   },
   contactContainer: {
     margin: 20,
-    marginTop: 0,
     borderRadius: 10,
     overflow: "hidden",
     shadowColor: "#000",

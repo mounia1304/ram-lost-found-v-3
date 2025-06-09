@@ -1,4 +1,4 @@
-package com.ramlostfoundjs
+package com.mounia_13.ramlostfoundjs
 
 import android.os.Build
 import android.os.Bundle

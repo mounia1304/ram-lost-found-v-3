@@ -1,4 +1,4 @@
-package com.ramlostfoundjs
+package com.mounia_13.ramlostfoundjs
 
 import android.app.Application
 import android.content.res.Configuration

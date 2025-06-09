@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "131706129314",
+    "project_id": "ram-lost-and-found",
+    "storage_bucket": "ram-lost-and-found.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:131706129314:android:e2580df2df878b847740fb",
+        "android_client_info": {
+          "package_name": "com.ram.lostfound"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "131706129314-c7l17gpsd1qjq7ket092pmdnj583r7ao.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7Jtw23kjoiuiY4Y-9tHCUYxykEWJZEWY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "131706129314-c7l17gpsd1qjq7ket092pmdnj583r7ao.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
