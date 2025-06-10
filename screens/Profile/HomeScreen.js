@@ -224,14 +224,6 @@ const HomeScreen = ({ navigation }) => {
               <Text style={styles.greeting}>Bonjour</Text>
               <Text style={styles.userName}>{userFirstName || "Voyageur"}</Text>
             </View>
-
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => navigation.navigate("ReportLost")}
-            >
-              <Ionicons name="add" size={20} color={COLORS.white} />
-              <Text style={styles.addButtonText}>Déclarer</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Stats simples */}
@@ -262,10 +254,14 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.actionsGrid}>
               <TouchableOpacity
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("Search")}
+                onPress={() => navigation.navigate("whereLost")}
               >
-                <Ionicons name="search-outline" size={24} color={COLORS.info} />
-                <Text style={styles.actionText}>Rechercher</Text>
+                <Ionicons
+                  name="add-circle-outline"
+                  size={24}
+                  color={COLORS.info}
+                />
+                <Text style={styles.actionText}>Objet perdu</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -282,14 +278,14 @@ const HomeScreen = ({ navigation }) => {
 
               <TouchableOpacity
                 style={styles.actionCard}
-                onPress={() => navigation.navigate("Profile")}
+                onPress={() => navigation.navigate("About")}
               >
                 <Ionicons
-                  name="person-outline"
+                  name="information-circle-outline"
                   size={24}
                   color={COLORS.tertiary}
                 />
-                <Text style={styles.actionText}>Profil</Text>
+                <Text style={styles.actionText}>Á propos</Text>
               </TouchableOpacity>
 
               <TouchableOpacity

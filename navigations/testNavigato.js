@@ -14,6 +14,11 @@ import ClaimLookupScreen from "../screens/searchReportScreen";
 import ProfileTabs from "./ProfileTabs";
 import ObjectDetailsScreen from "../screens/Profile/objectDetailsScreen";
 import AuthLoadingScreen from "../screens/AuthLoadingScreen";
+import LostChoiceScreen from "../screens/reportLost/whereLost";
+import HelpScreen from "../screens/Profile/helpScreen";
+import AboutScreen from "../screens/Profile/aboutScreen";
+import ReportDetailsScreen from "../screens/Profile/reportdetails";
+import AllReportsScreen from "../screens/Profile/allreportsScreen";
 const Stack = createStackNavigator();
 const AuthNavigator = () => {
   return (
@@ -81,6 +86,31 @@ const AuthNavigator = () => {
       <Stack.Screen
         name="SearchDoc"
         component={ClaimLookupScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="whereLost"
+        component={LostChoiceScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Help"
+        component={HelpScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="About"
+        component={AboutScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ReportDetails"
+        component={ReportDetailsScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="AllReports"
+        component={AllReportsScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

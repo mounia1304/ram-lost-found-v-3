@@ -239,27 +239,7 @@ const ReportLostScreen = ({ navigation }) => {
 
   // Fonction pour rediriger vers l'authentification
   const redirectToAuth = () => {
-    Alert.alert(
-      "Authentification requise",
-      "Vous devez être connecté pour déclarer un objet perdu.",
-      [
-        {
-          text: "Se connecter",
-          onPress: () =>
-            navigation.navigate("Login", { returnTo: "ReportLost" }),
-        },
-        {
-          text: "Créer un compte",
-          onPress: () =>
-            navigation.navigate("Register", { returnTo: "ReportLost" }),
-        },
-        {
-          text: "Annuler",
-          style: "cancel",
-          onPress: () => navigation.goBack(),
-        },
-      ]
-    );
+    navigation.navigate("Login", { returnTo: "ReportLost" });
   };
 
   // Fonctions gestion formulaire avec vérifications de sécurité

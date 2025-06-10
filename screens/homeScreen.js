@@ -113,110 +113,6 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
-  const changeLanguage = (lang) => {
-    setSelectedLanguage(lang);
-    setIsMenuVisible(false);
-  };
-
-  const renderLanguageMenu = () => {
-    return (
-      <Modal
-        transparent={true}
-        visible={isMenuVisible}
-        animationType="fade"
-        onRequestClose={() => setIsMenuVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsMenuVisible(false)}
-        >
-          <View style={styles.menuContainer}>
-            <View style={styles.menuHeader}>
-              <Text style={styles.menuTitle}>Langue / Language</Text>
-              <TouchableOpacity onPress={() => setIsMenuVisible(false)}>
-                <Ionicons name="close" size={24} color={COLORS.text} />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.menuItem,
-                selectedLanguage === "FR" && styles.menuItemSelected,
-              ]}
-              onPress={() => changeLanguage("FR")}
-            >
-              <Text style={styles.menuItemText}>Français</Text>
-              {selectedLanguage === "FR" && (
-                <Ionicons name="checkmark" size={20} color={COLORS.primary} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.menuItem,
-                selectedLanguage === "EN" && styles.menuItemSelected,
-              ]}
-              onPress={() => changeLanguage("EN")}
-            >
-              <Text style={styles.menuItemText}>English</Text>
-              {selectedLanguage === "EN" && (
-                <Ionicons name="checkmark" size={20} color={COLORS.primary} />
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.menuItem,
-                selectedLanguage === "AR" && styles.menuItemSelected,
-              ]}
-              onPress={() => changeLanguage("AR")}
-            >
-              <Text style={styles.menuItemText}>العربية</Text>
-              {selectedLanguage === "AR" && (
-                <Ionicons name="checkmark" size={20} color={COLORS.primary} />
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.menuDivider} />
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuVisible(false);
-                handleAuthenticatedNavigation("profileTabs");
-              }}
-            >
-              <Ionicons
-                name="person-outline"
-                size={20}
-                color={COLORS.text}
-                style={styles.menuItemIcon}
-              />
-              <Text style={styles.menuItemText}>Mon Profil</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => {
-                setIsMenuVisible(false);
-                handleNavigate("Settings");
-              }}
-            >
-              <Ionicons
-                name="settings-outline"
-                size={20}
-                color={COLORS.text}
-                style={styles.menuItemIcon}
-              />
-              <Text style={styles.menuItemText}>Paramètres</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-
   const getTabSubtitle = () => {
     if (activeTab === "lost") {
       return "Retrouvez vos objets personnels perdus dans les aéroports ou pendant vos vols";
@@ -235,9 +131,6 @@ const HomeScreen = ({ navigation }) => {
 
         <View style={styles.headerContent}>
           <View style={styles.headerTopRow}>
-            <TouchableOpacity onPress={toggleMenu} style={styles.menuButton}>
-              <Ionicons name="menu" size={24} color="white" />
-            </TouchableOpacity>
             <Image source={ramLogo} style={styles.logo} resizeMode="contain" />
             <View style={{ width: 24 }} />
           </View>
@@ -325,7 +218,7 @@ const HomeScreen = ({ navigation }) => {
             style={styles.mainActionButton}
             onPress={() => {
               if (activeTab === "lost") {
-                handleAuthenticatedNavigation("ReportLost");
+                handleAuthenticatedNavigation("whereLost");
               } else {
                 handleNavigate("FoundChoice");
               }
@@ -552,8 +445,6 @@ const HomeScreen = ({ navigation }) => {
 
         <View style={styles.bottomSpace} />
       </Animated.ScrollView>
-
-      {renderLanguageMenu()}
     </View>
   );
 };

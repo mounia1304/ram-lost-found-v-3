@@ -13,17 +13,19 @@
           "color": "#C20831"
         }
       ],
-      "@react-native-firebase/app",
-      "@react-native-firebase/messaging",
-     [
+      [
         "onesignal-expo-plugin",
         {
           "mode": "development"
         }
-      ]
+      ],
+      "expo-mail-composer"
     ],
     "android": {
       "package": "com.mounia_13.ramlostfoundjs"
+    },
+    "ios": {
+      "bundleIdentifier": "com.mounia13.ramlostfoundjs"
     },
     "extra": {
       "eas": {

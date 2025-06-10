@@ -89,13 +89,13 @@ export const saveFoundObjectReport = async (data, imageUri) => {
       try {
         const fullDescription = `
 Type: ${data.typeObjet}.
-Lieu de récupération: ${data.lieu}.
+Lieu de trouve: ${data.lieu}.
 Vol n°: ${data.numVol}.
 Description: ${data.description}.
         `.trim();
 
         const response = await fetch(
-          "https://d1fa-41-92-20-80.ngrok-free.app/generate-embedding",
+          "https://17e7-105-190-182-242.ngrok-free.app/generate-embedding",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },

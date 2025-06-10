@@ -577,51 +577,6 @@ export default function ProfileScreen({ navigation }) {
             )}
           </View>
 
-          {/* Menu d'options */}
-          <View style={styles.menuSection}>
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
-              <View
-                style={[
-                  styles.menuIcon,
-                  { backgroundColor: COLORS.backgroundSemanticCaution },
-                ]}
-              >
-                <Ionicons
-                  name="shield-outline"
-                  size={20}
-                  color={COLORS.semanticCaution}
-                />
-              </View>
-              <Text style={styles.menuText}>Confidentialité</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={COLORS.neutral700}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.menuItem} activeOpacity={0.8}>
-              <View
-                style={[
-                  styles.menuIcon,
-                  { backgroundColor: COLORS.ramAccentPrimaryLight },
-                ]}
-              >
-                <Ionicons
-                  name="help-circle-outline"
-                  size={20}
-                  color={COLORS.ramAccentPrimaryDark}
-                />
-              </View>
-              <Text style={styles.menuText}>Aide & Support</Text>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={COLORS.neutral700}
-              />
-            </TouchableOpacity>
-          </View>
-
           {/* Déconnexion */}
           <TouchableOpacity
             style={styles.logoutButton}

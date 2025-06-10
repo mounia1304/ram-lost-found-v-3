@@ -37,7 +37,8 @@ def save_match(lost_id, found_id, score, user_id=None):
         "score": score,
         "user_Id": user_id,
         "status": "waiting",
-        "timestamp": datetime.utcnow()
+        "timestamp": datetime.now(timezone.utc)
+
     }
     db.collection("matches").add(match_data)
  # 🔁 Met à jour les statuts des objets liés
@@ -102,6 +103,7 @@ def generate_embedding():
 
     except Exception as e:
         # Sauvegarde en cas d’échec dans pending
+        print(f"[ ERREUR dans /generate-embedding] {str(e)}")
         db.collection("objects_pending").add({
             "docId": doc_id,
             "description": description,

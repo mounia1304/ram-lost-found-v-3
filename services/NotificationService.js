@@ -116,6 +116,7 @@ class NotificationService {
 
     // Quand l'utilisateur clique sur une notification
     Notifications.addNotificationResponseReceivedListener((response) => {
+      navigator.navigate("Notifications");
       console.log("👆 Notification cliquée");
     });
   }
